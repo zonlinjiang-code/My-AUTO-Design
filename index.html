@@ -1,0 +1,1940 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图文自动排版工具</title>
+  <style>
+    :root {
+      --ui-bg: #f2f3ef;
+      --panel: #f9faf7;
+      --panel-2: #eceee9;
+      --ink: #111111;
+      --muted: #6a6e68;
+      --line: #d4d8d0;
+      --accent: #0a6f68;
+      --canvas-w: 760px;
+      --canvas-fit-w: min(var(--canvas-w), calc(100% - 56px));
+      --preview-scale: 1;
+      --poster-bg: #fffefa;
+      --main-color: #111111;
+      --secondary-color: #111111;
+      --poster-pad: 3.8%;
+      --main-size: 43px;
+      --main-latin-weight: 600;
+      --main-cjk-weight: 600;
+      --main-latin-stroke: 0.08px;
+      --main-cjk-stroke: 0.08px;
+      --main-tracking: -0.02em;
+      --main-leading: 0.94;
+      --main-align: left;
+      --secondary-size: 11px;
+      --secondary-latin-weight: 600;
+      --secondary-cjk-weight: 600;
+      --secondary-latin-stroke: 0.08px;
+      --secondary-cjk-stroke: 0.08px;
+      --secondary-tracking: 0em;
+      --secondary-leading: 1;
+      --secondary-align: left;
+      --image-scale: 1.18;
+      --image-shift: 0em;
+      --type-total: 3s;
+      --main-latin: Inter, Arial, sans-serif;
+      --main-cjk: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+      --secondary-latin: Inter, Arial, sans-serif;
+      --secondary-cjk: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--ui-bg);
+      color: var(--ink);
+      font-family: "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 324px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      height: 100vh;
+      overflow: auto;
+      padding: 12px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .sidebar h1 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .section {
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .section:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #343832;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    label,
+    .field {
+      display: grid;
+      gap: 5px;
+      margin: 6px 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #3f433e;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      align-items: end;
+    }
+
+    .control-grid.three {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 68px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #ffffff;
+      color: #151714;
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    input,
+    select {
+      min-height: 28px;
+      padding: 5px 7px;
+    }
+
+    input[type="range"] {
+      min-height: 24px;
+      padding: 0;
+      accent-color: var(--accent);
+    }
+
+    input[type="color"] {
+      height: 30px;
+      padding: 2px;
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+      padding: 8px;
+      line-height: 1.35;
+    }
+
+    .compact textarea {
+      min-height: 54px;
+    }
+
+    button {
+      min-height: 28px;
+      padding: 6px 8px;
+      background: #171917;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #ffffff;
+      color: #111111;
+    }
+
+    button.is-active,
+    .segmented button.is-active {
+      border-color: #111111;
+      background: #111111;
+      color: #ffffff;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #ffffff;
+    }
+
+    .segmented button {
+      min-height: 28px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      color: #111111;
+      font-size: 12px;
+    }
+
+    .segmented button:last-child {
+      border-right: 0;
+    }
+
+    .value {
+      min-width: 54px;
+      padding: 4px 5px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel-2);
+      text-align: center;
+      font-size: 11px;
+      color: #1d211c;
+    }
+
+    input.value {
+      min-height: 28px;
+      width: 70px;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 800;
+      appearance: textfield;
+    }
+
+    input.value::-webkit-outer-spin-button,
+    input.value::-webkit-inner-spin-button {
+      margin: 0;
+      appearance: none;
+    }
+
+    .hint {
+      margin: 7px 0 0;
+      font-size: 11px;
+      line-height: 1.42;
+      color: var(--muted);
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #3f433e;
+    }
+
+    .check-row input {
+      width: 15px;
+      height: 15px;
+      min-height: 0;
+      accent-color: var(--accent);
+    }
+
+    details.advanced {
+      margin: 8px 0;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #ffffff;
+    }
+
+    details.advanced summary {
+      min-height: 28px;
+      padding: 6px 9px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      color: #2c302a;
+      list-style: none;
+    }
+
+    details.advanced summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.advanced summary::after {
+      content: "+";
+      float: right;
+      font-weight: 900;
+    }
+
+    details.advanced[open] summary::after {
+      content: "-";
+    }
+
+    .advanced-body {
+      padding: 0 9px 8px;
+    }
+
+    .advanced.animation-panel {
+      margin-top: 0;
+      background: var(--panel-2);
+    }
+
+    .advanced.animation-panel summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stage-wrap {
+      position: relative;
+      min-width: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 78px 56px 56px;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+        var(--ui-bg);
+      background-size: 24px 24px;
+      cursor: default;
+      user-select: none;
+    }
+
+    .stage-wrap.is-panning {
+      cursor: grabbing;
+    }
+
+    .zoom-dock {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      z-index: 5;
+      display: inline-grid;
+      grid-template-columns: repeat(4, auto);
+      gap: 4px;
+      margin: 0;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(249, 250, 247, 0.92);
+      backdrop-filter: blur(10px);
+      transform: none;
+    }
+
+    .zoom-dock button {
+      width: auto;
+      min-width: 40px;
+      min-height: 26px;
+      padding: 4px 7px;
+      background: #ffffff;
+      color: #111111;
+      font-size: 11px;
+    }
+
+    .poster-shell {
+      width: var(--canvas-fit-w);
+      position: relative;
+      transform: scale(var(--preview-scale));
+      transform-origin: top center;
+      margin: auto;
+    }
+
+    .poster {
+      width: 100%;
+      max-width: 1080px;
+      min-width: 320px;
+      aspect-ratio: var(--poster-ratio, 0.82);
+      background: var(--poster-bg);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: var(--poster-pad);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .main-copy {
+      min-height: 0;
+      color: var(--main-color);
+      font-family: var(--main-latin);
+      font-size: var(--main-size);
+      font-weight: var(--main-latin-weight);
+      -webkit-text-stroke: var(--main-latin-stroke) currentColor;
+      paint-order: stroke fill;
+      line-height: var(--main-leading);
+      letter-spacing: var(--main-tracking);
+      text-align: var(--main-align);
+      word-break: normal;
+      overflow-wrap: anywhere;
+      hyphens: auto;
+      line-break: loose;
+    }
+
+    .secondary-copy {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content;
+      gap: clamp(18px, 6%, 64px);
+      align-items: end;
+      margin-top: 22px;
+      color: var(--secondary-color);
+      font-family: var(--secondary-latin);
+      font-size: var(--secondary-size);
+      font-weight: var(--secondary-latin-weight);
+      -webkit-text-stroke: var(--secondary-latin-stroke) currentColor;
+      paint-order: stroke fill;
+      line-height: var(--secondary-leading);
+      letter-spacing: var(--secondary-tracking);
+      text-align: var(--secondary-align);
+      word-break: normal;
+      overflow-wrap: anywhere;
+      line-break: loose;
+    }
+
+    .secondary-copy > div {
+      min-width: 0;
+    }
+
+    .secondary-copy > div:last-child {
+      white-space: nowrap;
+      justify-self: end;
+    }
+
+    .cjk-main {
+      font-family: var(--main-cjk);
+      font-weight: var(--main-cjk-weight);
+      -webkit-text-stroke: var(--main-cjk-stroke) currentColor;
+    }
+
+    .cjk-secondary {
+      font-family: var(--secondary-cjk);
+      font-weight: var(--secondary-cjk-weight);
+      -webkit-text-stroke: var(--secondary-cjk-stroke) currentColor;
+    }
+
+    .random-letter {
+      display: inline-block;
+      transform-origin: 50% 70%;
+    }
+
+    .inline-image {
+      display: inline-flex;
+      width: calc(1em * var(--image-scale));
+      height: calc(1em * var(--image-scale) * 0.72);
+      margin: 0 0.08em;
+      vertical-align: middle;
+      align-items: center;
+      justify-content: center;
+      transform: translateY(var(--image-shift));
+      overflow: hidden;
+      line-height: 1;
+    }
+
+    .inline-image img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .empty-image {
+      border: 2px dashed #b8bcb3;
+      border-radius: 7px;
+      color: #8b9087;
+      font-size: 0.34em;
+      font-weight: 800;
+      letter-spacing: 0;
+      background: rgba(255, 255, 255, 0.28);
+      line-height: 1;
+    }
+
+    .paren {
+      display: inline-block;
+      font-size: 1.3em;
+      line-height: 0.78;
+      letter-spacing: 0;
+    }
+
+    .typewriter-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      pointer-events: none;
+    }
+
+    .poster.typewriter-on .main-copy,
+    .poster.typewriter-on .secondary-copy {
+      opacity: 0;
+    }
+
+    .poster.typewriter-on .typewriter-layer {
+      display: block;
+    }
+
+    .typewriter-char,
+    .typewriter-image-unit {
+      position: absolute;
+      opacity: 0;
+      animation: typewriterUnitReveal var(--type-unit-duration, 70ms) steps(1, end) forwards;
+      animation-delay: var(--type-delay, 0ms);
+    }
+
+    .typewriter-char {
+      white-space: pre;
+      transform-origin: 0 70%;
+    }
+
+    .typewriter-image-unit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .typewriter-image-unit img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    @keyframes typewriterUnitReveal {
+      to {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        height: auto;
+        max-height: none;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .stage-wrap {
+        height: auto;
+        min-height: 80vh;
+        padding: 42px 16px 16px;
+      }
+
+      .poster-shell {
+        width: min(var(--canvas-w), 100%);
+      }
+
+      .poster {
+        width: 100%;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .sidebar,
+      .zoom-dock {
+        display: none;
+      }
+
+      .app,
+      .stage-wrap {
+        display: block;
+        height: auto;
+        min-height: 0;
+        padding: 0;
+        background: #ffffff;
+      }
+
+      .poster-shell {
+        width: 100%;
+        transform: none;
+      }
+
+      .poster {
+        width: 100%;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar" aria-label="排版控制">
+      <h1>图文自动排版工具</h1>
+
+      <section class="section">
+        <label>
+          画布宽度
+          <div class="row">
+            <input id="canvasWidth" type="range" min="360" max="1080" value="760">
+            <input id="canvasWidthValue" class="value" type="number" min="360" max="1080" value="760" aria-label="画布宽度数值">
+          </div>
+        </label>
+        <label>
+          画布比例
+          <select id="canvasRatio">
+            <option value="1">1:1 正方形</option>
+            <option value="0.75" selected>3:4 竖版</option>
+            <option value="0.5625">9:16 竖屏</option>
+            <option value="1.7777778">16:9 横屏</option>
+            <option value="0.7070707">A4 竖版</option>
+          </select>
+        </label>
+        <div class="control-grid">
+          <label>
+            背景色
+            <input id="posterBg" type="color" value="#fffefa">
+          </label>
+          <label>
+            正文字色
+            <input id="mainColor" type="color" value="#111111">
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">正文</div>
+        <details class="advanced">
+          <summary>正文内容</summary>
+          <div class="advanced-body">
+            <label>
+              文字内容
+              <textarea id="mainText" spellcheck="false"></textarea>
+            </label>
+          </div>
+        </details>
+        <div class="control-grid">
+          <label>
+            英文字体
+            <select id="mainLatin">
+              <option value='Inter, Arial, sans-serif'>Inter</option>
+              <option value='Arial, "Arial Black", sans-serif'>Arial / Arial Black</option>
+              <option value='Impact, "Arial Narrow", sans-serif'>Impact</option>
+              <option value='"Franklin Gothic Medium", Arial, sans-serif'>Franklin Gothic</option>
+            </select>
+          </label>
+          <label>
+            中文字体
+            <select id="mainCjk">
+              <option value='"Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif'>Noto Sans SC</option>
+              <option value='"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'>思源黑体</option>
+              <option value='MiSans, "Microsoft YaHei", "Noto Sans SC", sans-serif'>小米兰亭黑</option>
+              <option value='"Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif'>微软雅黑 UI</option>
+            </select>
+          </label>
+        </div>
+        <div class="control-grid">
+          <label>
+            英文字重
+            <select id="mainLatinWeight">
+              <option value="300">Light 300</option>
+              <option value="400">Regular 400</option>
+              <option value="500">Medium 500</option>
+              <option value="600" selected>SemiBold 600</option>
+              <option value="700">Bold 700</option>
+              <option value="760">Poster 760</option>
+              <option value="900">Black 900</option>
+            </select>
+          </label>
+          <label>
+            中文字重
+            <select id="mainCjkWeight">
+              <option value="300">300</option>
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="600" selected>600</option>
+              <option value="700">700</option>
+              <option value="760">760</option>
+              <option value="900">900</option>
+            </select>
+          </label>
+        </div>
+        <div class="control-grid">
+          <label>
+            对齐
+            <div class="segmented" data-align-group="main">
+              <button type="button" data-align="left" class="is-active">L</button>
+              <button type="button" data-align="center">C</button>
+              <button type="button" data-align="right">R</button>
+              <button type="button" data-align="justify">J</button>
+            </div>
+          </label>
+        </div>
+        <details class="advanced">
+          <summary>字号 / 字间距 / 行间距</summary>
+          <div class="advanced-body">
+            <label>
+              字号
+              <div class="row">
+                <input id="mainSize" type="range" min="20" max="86" value="43">
+                <input id="mainSizeValue" class="value" type="number" min="20" max="86" value="43" aria-label="正文字号数值">
+              </div>
+            </label>
+            <label>
+              字间距
+              <div class="row">
+                <input id="mainTracking" type="range" min="-8" max="10" value="-2">
+                <input id="mainTrackingValue" class="value" type="number" min="-8" max="10" value="-2" aria-label="正文字间距数值">
+              </div>
+            </label>
+            <label>
+              行间距
+              <div class="row">
+                <input id="mainLeading" type="range" min="78" max="150" value="94">
+                <input id="mainLeadingValue" class="value" type="number" min="78" max="150" value="94" aria-label="正文行间距数值">
+              </div>
+            </label>
+          </div>
+        </details>
+        <div class="control-grid">
+          <div class="field">
+            随机字母
+            <button id="randomLetters" class="secondary" type="button">开启随机大小</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">括号图片</div>
+        <div class="control-grid">
+          <button id="pickFolder" type="button">选择文件夹</button>
+          <button id="shuffleImages" class="secondary" type="button">随机图片</button>
+        </div>
+        <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple hidden>
+        <p id="folderStatus" class="hint">尚未选择图片文件夹。文字里的空花括号会先显示为 IMG 占位框。</p>
+        <div class="control-grid">
+          <label>
+            图片大小
+            <div class="row">
+              <input id="imageScale" type="range" min="60" max="300" value="118">
+              <input id="imageScaleValue" class="value" type="number" min="60" max="300" value="118" aria-label="图片大小数值">
+            </div>
+          </label>
+          <label>
+            图片基线
+            <div class="row">
+              <input id="imageShift" type="range" min="-45" max="30" value="0">
+              <input id="imageShiftValue" class="value" type="number" min="-45" max="30" value="0" aria-label="图片基线数值">
+            </div>
+          </label>
+        </div>
+        <label class="check-row">
+          <input id="randomRemoveBg" type="checkbox">
+          随机去背景
+        </label>
+      </section>
+
+      <section class="section compact">
+        <div class="section-title">底部文字</div>
+        <details class="advanced">
+          <summary>底部文字</summary>
+          <div class="advanced-body">
+            <div class="control-grid">
+              <label>
+                左侧长栏
+                <textarea id="footerOne" spellcheck="false"></textarea>
+              </label>
+              <label>
+                中间长栏
+                <textarea id="footerTwo" spellcheck="false"></textarea>
+              </label>
+            </div>
+            <label>
+              右侧小栏
+              <textarea id="footerThree" spellcheck="false"></textarea>
+            </label>
+          </div>
+        </details>
+        <div class="control-grid">
+          <label>
+            英文字体
+            <select id="secondaryLatin">
+              <option value='Inter, Arial, sans-serif'>Inter</option>
+              <option value='Arial, "Arial Black", sans-serif'>Arial / Arial Black</option>
+              <option value='Impact, "Arial Narrow", sans-serif'>Impact</option>
+              <option value='"Franklin Gothic Medium", Arial, sans-serif'>Franklin Gothic</option>
+            </select>
+          </label>
+          <label>
+            中文字体
+            <select id="secondaryCjk">
+              <option value='"Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif'>Noto Sans SC</option>
+              <option value='"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'>思源黑体</option>
+              <option value='MiSans, "Microsoft YaHei", "Noto Sans SC", sans-serif'>小米兰亭黑</option>
+              <option value='"Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif'>微软雅黑 UI</option>
+            </select>
+          </label>
+        </div>
+        <div class="control-grid">
+          <label>
+            字色
+            <input id="secondaryColor" type="color" value="#111111">
+          </label>
+          <label>
+            英文字重
+            <select id="secondaryLatinWeight">
+              <option value="300">300</option>
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="600" selected>600</option>
+              <option value="720">720</option>
+              <option value="900">900</option>
+            </select>
+          </label>
+          <label>
+            中文字重
+            <select id="secondaryCjkWeight">
+              <option value="300">300</option>
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="600" selected>600</option>
+              <option value="720">720</option>
+              <option value="900">900</option>
+            </select>
+          </label>
+        </div>
+        <details class="advanced">
+          <summary>字号 / 字间距 / 行间距</summary>
+          <div class="advanced-body">
+            <label>
+              字号
+              <div class="row">
+                <input id="secondarySize" type="range" min="8" max="30" value="11">
+                <input id="secondarySizeValue" class="value" type="number" min="8" max="30" value="11" aria-label="底部字号数值">
+              </div>
+            </label>
+            <label>
+              字间距
+              <div class="row">
+                <input id="secondaryTracking" type="range" min="-5" max="12" value="0">
+                <input id="secondaryTrackingValue" class="value" type="number" min="-5" max="12" value="0" aria-label="底部字间距数值">
+              </div>
+            </label>
+            <label>
+              行间距
+              <div class="row">
+                <input id="secondaryLeading" type="range" min="80" max="160" value="100">
+                <input id="secondaryLeadingValue" class="value" type="number" min="80" max="160" value="100" aria-label="底部行间距数值">
+              </div>
+            </label>
+          </div>
+        </details>
+        <div class="control-grid">
+          <label>
+            对齐
+            <div class="segmented" data-align-group="secondary">
+              <button type="button" data-align="left" class="is-active">L</button>
+              <button type="button" data-align="center">C</button>
+              <button type="button" data-align="right">R</button>
+              <button type="button" data-align="justify">J</button>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <details id="animationPanel" class="advanced animation-panel">
+          <summary>打字机动画</summary>
+          <div class="advanced-body">
+            <label class="check-row">
+              <input id="typewriterToggle" type="checkbox">
+              启用逐字出现
+            </label>
+            <label>
+              打字机速度
+              <div class="row">
+                <input id="typewriterSpeed" type="range" min="10" max="180" step="5" value="80">
+                <input id="typewriterSpeedValue" class="value" type="number" min="10" max="180" step="5" value="80" aria-label="每秒出现字符数">
+              </div>
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <div class="section-title">导出</div>
+        <div class="control-grid">
+          <button id="exportPngBottom" type="button">导出 PNG</button>
+          <button id="printPdfBottom" class="secondary" type="button">导出 PDF</button>
+        </div>
+        <p id="exportStatus" class="hint">PNG 和 PDF 使用同一张海报渲染结果生成，保持内容一致。</p>
+      </section>
+    </aside>
+
+    <section class="stage-wrap" aria-label="海报预览">
+      <div class="zoom-dock" aria-label="画布快捷宽度">
+        <button type="button" data-scale="0.35" title="预览缩放 35%">35%</button>
+        <button type="button" data-scale="0.5" title="预览缩放 50%">50%</button>
+        <button type="button" data-scale="0.75" title="预览缩放 75%">75%</button>
+        <button type="button" data-scale="1" title="预览缩放 100%">100%</button>
+      </div>
+      <div id="posterShell" class="poster-shell">
+        <article id="poster" class="poster">
+          <div id="mainCopy" class="main-copy" lang="zh-CN"></div>
+          <footer class="secondary-copy">
+            <div id="footerOneOut"></div>
+            <div id="footerTwoOut"></div>
+            <div id="footerThreeOut"></div>
+          </footer>
+          <div id="typewriterLayer" class="typewriter-layer" aria-hidden="true"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const defaults = {
+      mainText: "AUTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images { } / choose a folder and let every text marker become an inline visual interruption { } / the layout engine keeps typography, image scale, color, rhythm, and spacing in a controlled editorial flow { } / when the image size changes, the surrounding leading follows the same visual proportion / { } / English copy leads the reading path, while Chinese annotation follows as a second voice { } / this page behaves like a compact poster studio: select a ratio, tune the weight, adjust tracking, and export the canvas for design tests { } / { } / use repeated braces as image beats, pauses, fragments, and small collisions inside the sentence / { } / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / 中文说明在后方补充功能语义与使用场景，帮助中英文内容在同一个画面中保持清晰阅读节奏 { } / the final canvas can be exported as PNG or PDF for poster studies, layout archives, and visual collections { } / { } / { } / { } / { } /",
+      footerOne: "We can try to integrate technology with our daily lives and randomly mix text and emojis.",
+      footerTwo: "When emojis become a part of our lives, symbols can also become sounds.",
+      footerThree: "/ From OpenAI Codex / Zonglin"
+    };
+    const els = Object.fromEntries(Array.from(document.querySelectorAll("[id]")).map((el) => [el.id, el]));
+    const state = {
+      imageItems: [],
+      imageOrder: [],
+      randomLetter: false,
+      baseMainLeading: Number(document.querySelector("#mainLeading")?.value || 94),
+      baseSecondaryLeading: Number(document.querySelector("#secondaryLeading")?.value || 100),
+      baseImageScale: Number(document.querySelector("#imageScale")?.value || 118),
+      seed: Date.now()
+    };
+
+    function setVar(name, value) {
+      document.documentElement.style.setProperty(name, value);
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function seeded(index, offset = 0) {
+      const x = Math.sin(index * 999 + state.seed + offset) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function decoratePlainText(text, secondary = false) {
+      const cjkClass = secondary ? "cjk-secondary" : "cjk-main";
+      let html = "";
+      let cjkRun = "";
+      let charIndex = 0;
+      const flushCjk = () => {
+        if (cjkRun) {
+          html += `<span class="${cjkClass}">${escapeHtml(cjkRun)}</span>`;
+          cjkRun = "";
+        }
+      };
+
+      for (const char of text) {
+        if (/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(char)) {
+          cjkRun += char;
+          charIndex += 1;
+          continue;
+        }
+
+        flushCjk();
+        const safe = escapeHtml(char);
+        if (!secondary && state.randomLetter && /[A-Za-z]/.test(char)) {
+          const scale = (0.82 + seeded(charIndex, 11) * 0.44).toFixed(2);
+          html += `<span class="random-letter" style="font-size:${scale}em">${safe}</span>`;
+        } else {
+          html += safe;
+        }
+
+        if (/[_/／、，。；：！？,.!?;:)-]/.test(char)) {
+          html += "<wbr>";
+        }
+        charIndex += 1;
+      }
+      flushCjk();
+      return html;
+    }
+
+    function shuffle(array) {
+      const copy = array.slice();
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(seeded(i, 101) * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function rebuildImageOrder() {
+      state.seed = Date.now();
+      state.imageOrder = shuffle(state.imageItems);
+    }
+
+    function imageSlot(index) {
+      const items = state.imageOrder.length ? state.imageOrder : state.imageItems;
+      const item = items[index % Math.max(items.length, 1)];
+      if (!item) {
+        return `<span class="paren">{</span><span class="inline-image empty-image">IMG</span><span class="paren">}</span>`;
+      }
+      const useCutout = els.randomRemoveBg.checked && item.cutout && item.clearSubject && seeded(index, 701) > 0.34;
+      const src = useCutout ? item.cutout : item.src;
+      return `<span class="paren">{</span><span class="inline-image"><img src="${src}" alt=""></span><span class="paren">}</span>`;
+    }
+
+    function renderMain() {
+      const parts = els.mainText.value.split(/(\{\s*\}|｛\s*｝)/g);
+      let slot = 0;
+      els.mainCopy.innerHTML = parts.map((part) => {
+        if (/^(\{\s*\}|｛\s*｝)$/.test(part)) {
+          const markup = imageSlot(slot);
+          slot += 1;
+          return markup;
+        }
+        return decoratePlainText(part);
+      }).join("");
+      refreshTypewriter();
+    }
+
+    function renderFooter() {
+      els.footerOneOut.innerHTML = decoratePlainText(els.footerOne.value, true).replace(/\n/g, "<br>");
+      els.footerTwoOut.innerHTML = decoratePlainText(els.footerTwo.value, true).replace(/\n/g, "<br>");
+      els.footerThreeOut.innerHTML = decoratePlainText(els.footerThree.value, true).replace(/\n/g, "<br>");
+      refreshTypewriter();
+    }
+
+    function refreshTypewriter() {
+      const speed = Number(els.typewriterSpeed?.value || 80);
+      setVar("--type-speed", `${speed}`);
+      els.poster.classList.toggle("typewriter-on", Boolean(els.typewriterToggle?.checked));
+      if (!els.typewriterToggle?.checked || !els.typewriterLayer) {
+        if (els.typewriterLayer) els.typewriterLayer.innerHTML = "";
+        return;
+      }
+      buildTypewriterLayer(speed);
+    }
+
+    function buildTypewriterLayer(speed) {
+      const posterRect = els.poster.getBoundingClientRect();
+      const correction = posterRect.width ? els.poster.offsetWidth / posterRect.width : 1;
+      const units = [];
+      collectTypewriterUnits(els.mainCopy, posterRect, correction, units);
+      collectTypewriterUnits(document.querySelector(".secondary-copy"), posterRect, correction, units);
+      const charsPerSecond = Math.max(10, Number(speed) || 80);
+      const step = Math.max(6, 1000 / charsPerSecond);
+      const unitDuration = Math.min(90, Math.max(24, step * 0.85));
+      const fragment = document.createDocumentFragment();
+
+      units.forEach((unit, index) => {
+        const node = unit.kind === "element" ? createTypewriterElement(unit) : createTypewriterChar(unit);
+        node.style.setProperty("--type-delay", `${index * step}ms`);
+        node.style.setProperty("--type-unit-duration", `${unitDuration}ms`);
+        fragment.appendChild(node);
+      });
+
+      els.typewriterLayer.replaceChildren(fragment);
+    }
+
+    function collectTypewriterUnits(root, posterRect, correction, units) {
+      if (!root) return;
+      const range = document.createRange();
+      const localRect = (rect) => ({
+        left: (rect.left - posterRect.left) * correction,
+        top: (rect.top - posterRect.top) * correction,
+        width: rect.width * correction,
+        height: rect.height * correction
+      });
+      const visit = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent || "";
+          const segments = segmentText(text);
+          for (const segment of segments) {
+            range.setStart(node, segment.start);
+            range.setEnd(node, segment.end);
+            const rect = Array.from(range.getClientRects()).find((item) => item.width || item.height);
+            if (rect && segment.text.trim()) {
+              units.push({ kind: "text", char: segment.text, rect: localRect(rect), parent: node.parentElement });
+            }
+          }
+          return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        if (node.classList.contains("paren") || node.classList.contains("inline-image")) {
+          const rect = node.getBoundingClientRect();
+          if (rect.width || rect.height) units.push({ kind: "element", source: node, rect: localRect(rect) });
+          return;
+        }
+
+        node.childNodes.forEach(visit);
+      };
+
+      root.childNodes.forEach(visit);
+      range.detach();
+    }
+
+    function createTypewriterChar(unit) {
+      const span = document.createElement("span");
+      const style = getComputedStyle(unit.parent);
+      span.className = "typewriter-char";
+      span.textContent = unit.char;
+      span.style.left = `${unit.rect.left}px`;
+      span.style.top = `${unit.rect.top}px`;
+      span.style.fontFamily = style.fontFamily;
+      span.style.fontSize = style.fontSize;
+      span.style.fontStyle = style.fontStyle;
+      span.style.fontWeight = style.fontWeight;
+      span.style.letterSpacing = style.letterSpacing;
+      span.style.lineHeight = style.lineHeight;
+      span.style.color = style.color;
+      span.style.webkitTextStrokeWidth = style.webkitTextStrokeWidth;
+      span.style.webkitTextStrokeColor = style.webkitTextStrokeColor;
+      return span;
+    }
+
+    function createTypewriterElement(unit) {
+      const span = unit.source.cloneNode(true);
+      const style = getComputedStyle(unit.source);
+      span.classList.add("typewriter-image-unit");
+      span.style.left = `${unit.rect.left}px`;
+      span.style.top = `${unit.rect.top}px`;
+      span.style.width = `${unit.rect.width}px`;
+      span.style.height = `${unit.rect.height}px`;
+      span.style.margin = "0";
+      span.style.transform = "none";
+      span.style.display = unit.source.classList.contains("paren") ? "inline-flex" : "inline-flex";
+      span.style.alignItems = "center";
+      span.style.justifyContent = "center";
+      span.style.border = style.border;
+      span.style.borderRadius = style.borderRadius;
+      span.style.color = style.color;
+      span.style.background = style.background;
+      span.style.font = style.font;
+      span.style.letterSpacing = style.letterSpacing;
+      span.style.lineHeight = style.lineHeight;
+      span.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+      return span;
+    }
+
+    let typewriterFrame = 0;
+    function queueTypewriterRebuild() {
+      if (!els.typewriterToggle?.checked) return;
+      cancelAnimationFrame(typewriterFrame);
+      typewriterFrame = requestAnimationFrame(() => refreshTypewriter());
+    }
+
+    function closeTypewriterAnimation(collapsePanel = true) {
+      if (!els.typewriterToggle?.checked) return;
+      els.typewriterToggle.checked = false;
+      refreshTypewriter();
+      if (collapsePanel && els.animationPanel) els.animationPanel.open = false;
+    }
+
+    function isAnimationControl(target) {
+      return Boolean(target.closest?.("#animationPanel"));
+    }
+
+    function bindRange(id, outputId, format, cssName, cssValue) {
+      const input = els[id];
+      const output = els[outputId];
+      const update = () => {
+        output.value = input.value;
+        setVar(cssName, cssValue(input.value));
+        if (id === "imageScale") syncLeadingWithImageScale();
+        if (id === "canvasWidth") updateCanvasFit();
+        if (id !== "typewriterSpeed") closeTypewriterAnimation();
+      };
+      const updateFromOutput = () => {
+        const parsed = Number(output.value);
+        if (!Number.isFinite(parsed)) return;
+        const min = Number(input.min);
+        const max = Number(input.max);
+        const next = Math.min(max, Math.max(min, parsed));
+        output.value = next;
+        input.value = next;
+        setVar(cssName, cssValue(input.value));
+        if (id === "imageScale") syncLeadingWithImageScale();
+        if (id === "canvasWidth") updateCanvasFit();
+        if (id !== "typewriterSpeed") closeTypewriterAnimation();
+      };
+      input.addEventListener("input", update);
+      output.addEventListener("change", updateFromOutput);
+      output.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") output.blur();
+      });
+      update();
+    }
+
+    function bindSelect(id, cssName) {
+      const input = els[id];
+      const update = () => {
+        setVar(cssName, input.value);
+        closeTypewriterAnimation();
+      };
+      input.addEventListener("input", update);
+      update();
+    }
+
+    function bindColor(id, cssName) {
+      const input = els[id];
+      const update = () => {
+        setVar(cssName, input.value);
+        closeTypewriterAnimation();
+      };
+      input.addEventListener("input", update);
+      update();
+    }
+
+    function bindAlignment(groupName, cssName) {
+      const group = document.querySelector(`[data-align-group="${groupName}"]`);
+      group.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-align]");
+        if (!button) return;
+        group.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
+        setVar(cssName, button.dataset.align);
+        closeTypewriterAnimation();
+      });
+    }
+
+    function syncLeadingWithImageScale() {
+      const ratio = Number(els.imageScale.value) / state.baseImageScale;
+      const mainNext = Math.round(state.baseMainLeading * (0.72 + ratio * 0.28));
+      const secondaryNext = Math.round(state.baseSecondaryLeading * (0.72 + ratio * 0.28));
+      setSyncedRange(els.mainLeading, els.mainLeadingValue, mainNext, "--main-leading", (v) => `${Number(v) / 100}`);
+      setSyncedRange(els.secondaryLeading, els.secondaryLeadingValue, secondaryNext, "--secondary-leading", (v) => `${Number(v) / 100}`);
+    }
+
+    function setSyncedRange(input, output, value, cssName, cssValue) {
+      const min = Number(input.min);
+      const max = Number(input.max);
+      const next = Math.min(max, Math.max(min, value));
+      input.value = next;
+      output.value = next;
+      setVar(cssName, cssValue(next));
+    }
+
+    function updateCanvasFit() {
+      const stage = document.querySelector(".stage-wrap");
+      if (!stage || !els.canvasWidth || !els.canvasRatio) return;
+      const stageStyle = getComputedStyle(stage);
+      const horizontalPad = parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
+      const verticalPad = parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom);
+      const desiredWidth = Number(els.canvasWidth.value) || 760;
+      const ratio = Number(els.canvasRatio.value) || 0.75;
+      const availableWidth = Math.max(280, stage.clientWidth - horizontalPad);
+      const availableHeightWidth = Math.max(280, (stage.clientHeight - verticalPad) * ratio);
+      const fittedWidth = Math.max(280, Math.min(desiredWidth, availableWidth, availableHeightWidth));
+      setVar("--canvas-fit-w", `${Math.round(fittedWidth)}px`);
+    }
+
+    function applyDefaults() {
+      els.mainText.value = defaults.mainText;
+      els.footerOne.value = defaults.footerOne;
+      els.footerTwo.value = defaults.footerTwo;
+      els.footerThree.value = defaults.footerThree;
+      renderMain();
+      renderFooter();
+    }
+
+    bindRange("canvasWidth", "canvasWidthValue", (v) => `${v}px`, "--canvas-w", (v) => `${v}px`);
+    bindRange("mainSize", "mainSizeValue", (v) => `${v}px`, "--main-size", (v) => `${v}px`);
+    bindRange("mainTracking", "mainTrackingValue", (v) => `${v}%`, "--main-tracking", (v) => `${Number(v) / 100}em`);
+    bindRange("mainLeading", "mainLeadingValue", (v) => `${v}%`, "--main-leading", (v) => `${Number(v) / 100}`);
+    bindRange("imageScale", "imageScaleValue", (v) => `${v}%`, "--image-scale", (v) => `${Number(v) / 100}`);
+    bindRange("imageShift", "imageShiftValue", (v) => `${v}%`, "--image-shift", (v) => `${Number(v) / 100}em`);
+    bindRange("secondarySize", "secondarySizeValue", (v) => `${v}px`, "--secondary-size", (v) => `${v}px`);
+    bindRange("secondaryTracking", "secondaryTrackingValue", (v) => `${v}%`, "--secondary-tracking", (v) => `${Number(v) / 100}em`);
+    bindRange("secondaryLeading", "secondaryLeadingValue", (v) => `${v}%`, "--secondary-leading", (v) => `${Number(v) / 100}`);
+    bindRange("typewriterSpeed", "typewriterSpeedValue", (v) => `${v}/s`, "--type-speed", (v) => `${v}`);
+
+    bindSelect("mainLatinWeight", "--main-latin-weight");
+    bindSelect("mainCjkWeight", "--main-cjk-weight");
+    bindSelect("mainLatin", "--main-latin");
+    bindSelect("mainCjk", "--main-cjk");
+    bindSelect("secondaryLatinWeight", "--secondary-latin-weight");
+    bindSelect("secondaryCjkWeight", "--secondary-cjk-weight");
+    bindSelect("secondaryLatin", "--secondary-latin");
+    bindSelect("secondaryCjk", "--secondary-cjk");
+    bindColor("posterBg", "--poster-bg");
+    bindColor("mainColor", "--main-color");
+    bindColor("secondaryColor", "--secondary-color");
+    bindAlignment("main", "--main-align");
+    bindAlignment("secondary", "--secondary-align");
+
+    const sidebar = document.querySelector(".sidebar");
+    ["input", "change"].forEach((eventName) => {
+      sidebar.addEventListener(eventName, (event) => {
+        if (!isAnimationControl(event.target)) closeTypewriterAnimation();
+      }, true);
+    });
+
+    els.canvasRatio.addEventListener("input", () => {
+      setVar("--poster-ratio", els.canvasRatio.value);
+      updateCanvasFit();
+    });
+    els.canvasRatio.dispatchEvent(new Event("input"));
+    els.mainText.addEventListener("input", renderMain);
+    [els.footerOne, els.footerTwo, els.footerThree].forEach((textarea) => textarea.addEventListener("input", renderFooter));
+
+    document.querySelectorAll(".zoom-dock button").forEach((button) => {
+      button.addEventListener("click", () => {
+        setVar("--preview-scale", button.dataset.scale);
+        document.querySelectorAll(".zoom-dock button").forEach((item) => item.classList.toggle("is-active", item === button));
+        updateCanvasFit();
+      });
+    });
+
+    els.randomLetters.addEventListener("click", () => {
+      closeTypewriterAnimation();
+      state.randomLetter = !state.randomLetter;
+      state.seed = Date.now();
+      els.randomLetters.textContent = state.randomLetter ? "重新随机字母" : "开启随机大小";
+      els.randomLetters.classList.toggle("is-active", state.randomLetter);
+      renderMain();
+    });
+
+    els.typewriterToggle.addEventListener("change", () => {
+      refreshTypewriter();
+    });
+
+    els.typewriterSpeed.addEventListener("input", () => {
+      refreshTypewriter();
+    });
+
+    els.typewriterSpeedValue.addEventListener("change", () => {
+      refreshTypewriter();
+    });
+
+    els.randomRemoveBg.addEventListener("change", renderMain);
+
+    els.pickFolder.addEventListener("click", async () => {
+      closeTypewriterAnimation();
+      if ("showDirectoryPicker" in window) {
+        try {
+          const dir = await window.showDirectoryPicker();
+          const files = await collectDirectoryImages(dir);
+          await loadImages(files, dir.name);
+          return;
+        } catch (error) {
+          if (error.name === "AbortError") return;
+        }
+      }
+      els.folderInput.click();
+    });
+
+    els.folderInput.addEventListener("change", async () => {
+      const files = Array.from(els.folderInput.files || []);
+      const firstPath = files[0]?.webkitRelativePath?.split("/")[0] || "已选文件夹";
+      await loadImages(files, firstPath);
+    });
+
+    els.shuffleImages.addEventListener("click", () => {
+      closeTypewriterAnimation();
+      rebuildImageOrder();
+      renderMain();
+    });
+
+    async function loadImages(files, folderName) {
+      revokeImageUrls();
+      const imageFiles = files.filter((file) => /^image\//.test(file.type) || /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(file.name));
+      els.folderStatus.textContent = imageFiles.length ? `正在载入 ${folderName} 中的 ${imageFiles.length} 张图片并分析背景。` : "这个文件夹里没有识别到图片。";
+      state.imageItems = await Promise.all(imageFiles.map(async (file) => {
+        const src = await fileToLayoutDataUrl(file);
+        const cutoutData = await makeCutoutCandidate(src).catch(() => null);
+        return {
+          name: file.name,
+          src,
+          cutout: cutoutData?.url || "",
+          clearSubject: Boolean(cutoutData?.clearSubject)
+        };
+      }));
+      rebuildImageOrder();
+      const cutoutCount = state.imageItems.filter((item) => item.clearSubject).length;
+      els.folderStatus.textContent = state.imageItems.length
+        ? `已载入 ${folderName} 中的 ${state.imageItems.length} 张图片，${cutoutCount} 张适合随机去背景。`
+        : "这个文件夹里没有识别到图片。";
+      renderMain();
+    }
+
+    function revokeImageUrls() {
+      state.imageItems = [];
+      state.imageOrder = [];
+    }
+
+    async function fileToLayoutDataUrl(file) {
+      const dataUrl = await fileToDataUrl(file);
+      if (/image\/svg\+xml|image\/gif/i.test(file.type)) return dataUrl;
+      try {
+        const img = await loadImage(dataUrl);
+        const maxSide = 1200;
+        const sourceMax = Math.max(img.naturalWidth, img.naturalHeight);
+        if (sourceMax <= maxSide) return dataUrl;
+        const scale = maxSide / sourceMax;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/png");
+      } catch (error) {
+        return dataUrl;
+      }
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function makeCutoutCandidate(src) {
+      const img = await loadImage(src);
+      const maxSide = 1400;
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const width = Math.max(1, Math.round(img.naturalWidth * scale));
+      const height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, width, height);
+      const image = ctx.getImageData(0, 0, width, height);
+      const data = image.data;
+      const bg = sampleBackground(data, width, height);
+      if (!bg.clearSubject) return null;
+      const threshold = bg.brightness > 220 ? 70 : 52;
+      for (let i = 0; i < data.length; i += 4) {
+        const distance = colorDistance(data[i], data[i + 1], data[i + 2], bg.r, bg.g, bg.b);
+        if (distance < threshold) {
+          data[i + 3] = 0;
+        } else if (distance < threshold + 28) {
+          data[i + 3] = Math.round(data[i + 3] * ((distance - threshold) / 28));
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+      return { url: canvas.toDataURL("image/png"), clearSubject: true };
+    }
+
+    function sampleBackground(data, width, height) {
+      const points = [];
+      const size = Math.max(5, Math.round(Math.min(width, height) * 0.05));
+      const zones = [
+        [0, 0],
+        [width - size, 0],
+        [0, height - size],
+        [width - size, height - size]
+      ];
+      zones.forEach(([x0, y0]) => {
+        for (let y = y0; y < y0 + size; y += 2) {
+          for (let x = x0; x < x0 + size; x += 2) {
+            const i = (y * width + x) * 4;
+            points.push([data[i], data[i + 1], data[i + 2]]);
+          }
+        }
+      });
+      const avg = points.reduce((acc, item) => [acc[0] + item[0], acc[1] + item[1], acc[2] + item[2]], [0, 0, 0]).map((v) => v / points.length);
+      const variance = points.reduce((acc, item) => acc + colorDistance(item[0], item[1], item[2], avg[0], avg[1], avg[2]), 0) / points.length;
+      const brightness = (avg[0] + avg[1] + avg[2]) / 3;
+      return {
+        r: avg[0],
+        g: avg[1],
+        b: avg[2],
+        brightness,
+        clearSubject: variance < 38 || brightness > 225
+      };
+    }
+
+    function colorDistance(r1, g1, b1, r2, g2, b2) {
+      return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const timer = setTimeout(() => reject(new Error("image load timeout")), 10000);
+        img.onload = () => {
+          clearTimeout(timer);
+          resolve(img);
+        };
+        img.onerror = (error) => {
+          clearTimeout(timer);
+          reject(error);
+        };
+        img.src = src;
+      });
+    }
+
+    async function collectDirectoryImages(dirHandle) {
+      const files = [];
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === "file" && /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(entry.name)) {
+          files.push(await entry.getFile());
+        }
+        if (entry.kind === "directory") {
+          files.push(...await collectDirectoryImages(entry));
+        }
+      }
+      return files;
+    }
+
+    async function renderPosterCanvas() {
+      return renderPosterCanvasManual();
+    }
+
+    async function renderPosterCanvasDom() {
+      await waitForPosterReady();
+      const { node, width, height, styleText } = clonePosterForExport();
+      const exportScale = 3;
+      const serialized = serializePosterNode(node, width, height, styleText);
+      const svg = [
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width * exportScale}" height="${height * exportScale}" viewBox="0 0 ${width * exportScale} ${height * exportScale}">`,
+        `<foreignObject width="${width}" height="${height}" transform="scale(${exportScale})">`,
+        serialized,
+        "</foreignObject>",
+        "</svg>"
+      ].join("");
+      const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+      const image = await loadImage(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(width * exportScale);
+      canvas.height = Math.round(height * exportScale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      return { canvas, width, height };
+    }
+
+    async function renderPosterCanvasManual() {
+      await waitForPosterReady();
+      const width = els.poster.offsetWidth;
+      const height = els.poster.offsetHeight;
+      const exportScale = 3;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(width * exportScale);
+      canvas.height = Math.round(height * exportScale);
+      const ctx = canvas.getContext("2d");
+      ctx.scale(exportScale, exportScale);
+      const posterRect = els.poster.getBoundingClientRect();
+      const correction = width / posterRect.width;
+      ctx.fillStyle = getComputedStyle(els.poster).backgroundColor;
+      ctx.fillRect(0, 0, width, height);
+      await drawPosterNode(ctx, els.poster, posterRect, correction);
+      return { canvas, width, height };
+    }
+
+    async function waitForPosterReady() {
+      if (document.fonts?.ready) await document.fonts.ready;
+      await Promise.all(Array.from(els.poster.querySelectorAll("img")).map((img) => {
+        if (img.complete) return true;
+        return new Promise((resolve) => {
+          const done = () => resolve(true);
+          img.onload = done;
+          img.onerror = done;
+          setTimeout(done, 3000);
+        });
+      }));
+    }
+
+    function clonePosterForExport() {
+      const width = els.poster.offsetWidth;
+      const height = els.poster.offsetHeight;
+      const clone = els.poster.cloneNode(true);
+      clone.classList.remove("typewriter-on");
+      clone.querySelector("#typewriterLayer")?.remove();
+      clone.removeAttribute("id");
+      clone.style.width = `${width}px`;
+      clone.style.height = `${height}px`;
+      clone.style.maxWidth = "none";
+      clone.style.minWidth = "0";
+      clone.style.boxShadow = "none";
+      clone.style.transform = "none";
+      clone.style.margin = "0";
+      const styleText = Array.from(document.querySelectorAll("style")).map((style) => style.textContent || "").join("\n");
+      return { node: clone, width, height, styleText };
+    }
+
+    function serializePosterNode(posterNode, width, height, styleText) {
+      const wrapper = document.createElement("div");
+      wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+      wrapper.style.width = `${width}px`;
+      wrapper.style.height = `${height}px`;
+      wrapper.style.margin = "0";
+      wrapper.style.padding = "0";
+      const computedRoot = getComputedStyle(document.documentElement);
+      for (const name of ["--poster-bg", "--main-color", "--secondary-color", "--poster-pad", "--main-size", "--main-latin-weight", "--main-cjk-weight", "--main-latin-stroke", "--main-cjk-stroke", "--main-tracking", "--main-leading", "--main-align", "--secondary-size", "--secondary-latin-weight", "--secondary-cjk-weight", "--secondary-latin-stroke", "--secondary-cjk-stroke", "--secondary-tracking", "--secondary-leading", "--secondary-align", "--image-scale", "--image-shift", "--main-latin", "--main-cjk", "--secondary-latin", "--secondary-cjk"]) {
+        wrapper.style.setProperty(name, computedRoot.getPropertyValue(name));
+      }
+      const style = document.createElement("style");
+      style.textContent = `${styleText}\n.poster{box-shadow:none!important;}`;
+      wrapper.appendChild(style);
+      wrapper.appendChild(posterNode);
+      return new XMLSerializer().serializeToString(wrapper);
+    }
+
+    async function drawPosterNode(ctx, root, posterRect, correction) {
+      const nodes = collectDrawableNodes(root);
+      for (const node of nodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          drawTextNode(ctx, node, posterRect, correction);
+        } else if (node.tagName === "IMG") {
+          await drawContainImage(ctx, node, posterRect, correction);
+        } else if (node.classList?.contains("empty-image")) {
+          drawEmptyImage(ctx, node, posterRect, correction);
+        }
+      }
+    }
+
+    function collectDrawableNodes(root) {
+      const nodes = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (node.parentElement?.closest(".typewriter-layer")) return NodeFilter.FILTER_REJECT;
+            if (node.parentElement?.closest(".empty-image")) return NodeFilter.FILTER_REJECT;
+            return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          }
+          if (node.classList?.contains("typewriter-layer")) return NodeFilter.FILTER_REJECT;
+          if (node.tagName === "IMG" || node.classList?.contains("empty-image")) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        }
+      });
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      return nodes;
+    }
+
+    function drawTextNode(ctx, textNode, posterRect, correction) {
+      const parent = textNode.parentElement;
+      const style = getComputedStyle(parent);
+      const text = textNode.textContent || "";
+      if (!text) return;
+      ctx.fillStyle = style.color;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const strokeWidth = parseFloat(style.webkitTextStrokeWidth || style.textStrokeWidth || "0") || 0;
+      if (strokeWidth > 0) {
+        ctx.lineWidth = strokeWidth * 2;
+        ctx.strokeStyle = style.webkitTextStrokeColor === "currentcolor" ? style.color : style.webkitTextStrokeColor;
+      }
+      const range = document.createRange();
+      const segments = segmentText(text);
+      for (const segment of segments) {
+        const char = segment.text;
+        if (!char.trim()) continue;
+        range.setStart(textNode, segment.start);
+        range.setEnd(textNode, segment.end);
+        const rects = Array.from(range.getClientRects());
+        rects.forEach((rect) => {
+          if (!rect.width && !rect.height) return;
+          const x = (rect.left - posterRect.left) * correction;
+          const y = ((rect.top - posterRect.top) * correction) + canvasBaselineForChar(ctx, char, rect.height * correction, fontSize);
+          if (strokeWidth > 0) ctx.strokeText(char, x, y);
+          ctx.fillText(char, x, y);
+        });
+      }
+      range.detach();
+    }
+
+    function segmentText(text) {
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+        return Array.from(segmenter.segment(text), (item) => ({
+          text: item.segment,
+          start: item.index,
+          end: item.index + item.segment.length
+        }));
+      }
+      const segments = [];
+      let index = 0;
+      for (const char of text) {
+        segments.push({ text: char, start: index, end: index + char.length });
+        index += char.length;
+      }
+      return segments;
+    }
+
+    function canvasBaselineForChar(ctx, char, rectHeight, fallbackFontSize) {
+      const metrics = ctx.measureText(char);
+      if (Number.isFinite(metrics.actualBoundingBoxAscent) && Number.isFinite(metrics.actualBoundingBoxDescent)) {
+        return (rectHeight + metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
+      }
+      return fallbackFontSize * 0.82;
+    }
+
+    async function drawContainImage(ctx, img, posterRect, correction) {
+      if (!img.complete) await new Promise((resolve) => {
+        const done = () => resolve(true);
+        img.onload = done;
+        img.onerror = done;
+        setTimeout(done, 3000);
+      });
+      if (!img.naturalWidth || !img.naturalHeight) {
+        drawEmptyImage(ctx, img.parentElement, posterRect, correction);
+        return;
+      }
+      const rect = img.getBoundingClientRect();
+      const boxWidth = rect.width * correction;
+      const boxHeight = rect.height * correction;
+      const naturalRatio = (img.naturalWidth || rect.width) / (img.naturalHeight || rect.height);
+      const boxRatio = boxWidth / boxHeight;
+      let drawWidth = boxWidth;
+      let drawHeight = boxHeight;
+      if (naturalRatio > boxRatio) {
+        drawHeight = boxWidth / naturalRatio;
+      } else {
+        drawWidth = boxHeight * naturalRatio;
+      }
+      const x = (rect.left - posterRect.left) * correction + (boxWidth - drawWidth) / 2;
+      const y = (rect.top - posterRect.top) * correction + (boxHeight - drawHeight) / 2;
+      ctx.drawImage(img, x, y, drawWidth, drawHeight);
+    }
+
+    function drawEmptyImage(ctx, node, posterRect, correction) {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      const x = (rect.left - posterRect.left) * correction;
+      const y = (rect.top - posterRect.top) * correction;
+      const width = rect.width * correction;
+      const height = rect.height * correction;
+      ctx.save();
+      ctx.strokeStyle = style.borderTopColor;
+      ctx.lineWidth = parseFloat(style.borderTopWidth) || 2;
+      ctx.setLineDash([6, 5]);
+      ctx.strokeRect(x, y, width, height);
+      ctx.fillStyle = style.color;
+      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(node.textContent.trim(), x + width / 2, y + height / 2);
+      ctx.restore();
+    }
+
+    async function exportPosterPng() {
+      els.exportStatus.textContent = "正在生成 PNG。";
+      try {
+        const { canvas } = await renderPosterCanvas();
+        const blob = await canvasToBlob(canvas, "image/png");
+        if (!blob) throw new Error("empty canvas");
+        downloadBlob(blob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.png`);
+        els.exportStatus.textContent = "PNG 已生成。";
+      } catch (error) {
+        els.exportStatus.textContent = `PNG 导出失败：${exportErrorMessage(error)}`;
+      }
+    }
+
+    async function exportPosterPdf() {
+      els.exportStatus.textContent = "正在生成 PDF。";
+      try {
+        const rendered = await renderPosterCanvas();
+        const pdfBlob = await makePdfFromCanvas(rendered.canvas, rendered.width, rendered.height);
+        downloadBlob(pdfBlob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.pdf`);
+        els.exportStatus.textContent = "PDF 已生成。";
+      } catch (error) {
+        els.exportStatus.textContent = `PDF 导出失败：${exportErrorMessage(error)}`;
+      }
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise((resolve, reject) => {
+        try {
+          canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("empty canvas blob")), type, quality);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    function exportErrorMessage(error) {
+      if (error?.name === "SecurityError") return "图片文件可能包含跨域或外部引用，浏览器禁止写入导出文件。";
+      return error?.message || "生成文件时发生未知错误。";
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function makePdfFromCanvas(canvas, pageWidth, pageHeight) {
+      const imageWidth = canvas.width;
+      const imageHeight = canvas.height;
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx.getImageData(0, 0, imageWidth, imageHeight).data;
+      const rgbRows = new Uint8Array((imageWidth * 3 + 1) * imageHeight);
+      let out = 0;
+      for (let y = 0; y < imageHeight; y += 1) {
+        rgbRows[out++] = 0;
+        for (let x = 0; x < imageWidth; x += 1) {
+          const i = (y * imageWidth + x) * 4;
+          const alpha = imageData[i + 3] / 255;
+          rgbRows[out++] = Math.round(imageData[i] * alpha + 255 * (1 - alpha));
+          rgbRows[out++] = Math.round(imageData[i + 1] * alpha + 255 * (1 - alpha));
+          rgbRows[out++] = Math.round(imageData[i + 2] * alpha + 255 * (1 - alpha));
+        }
+      }
+      const imageBytes = zlibStore(rgbRows);
+      const chunks = [];
+      const offsets = [];
+      let size = 0;
+      const push = (part) => {
+        const bytes = typeof part === "string" ? asciiBytes(part) : part;
+        chunks.push(bytes);
+        size += bytes.length;
+      };
+      const obj = (body) => {
+        offsets.push(size);
+        push(`${offsets.length} 0 obj\n${body}\nendobj\n`);
+      };
+
+      push("%PDF-1.4\n%auto-layout\n");
+      obj("<< /Type /Catalog /Pages 2 0 R >>");
+      obj("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+      obj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+      offsets.push(size);
+      push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ${imageWidth} >> /Length ${imageBytes.length} >>\nstream\n`);
+      push(imageBytes);
+      push("\nendstream\nendobj\n");
+      const content = `q\n${pageWidth.toFixed(2)} 0 0 ${pageHeight.toFixed(2)} 0 0 cm\n/Im0 Do\nQ\n`;
+      obj(`<< /Length ${content.length} >>\nstream\n${content}endstream`);
+
+      const xrefOffset = size;
+      push(`xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`);
+      offsets.forEach((offset) => push(`${String(offset).padStart(10, "0")} 00000 n \n`));
+      push(`trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+      return new Blob(chunks, { type: "application/pdf" });
+    }
+
+    function zlibStore(data) {
+      const blocks = [];
+      let offset = 0;
+      while (offset < data.length) {
+        const len = Math.min(65535, data.length - offset);
+        const block = new Uint8Array(5 + len);
+        block[0] = offset + len >= data.length ? 1 : 0;
+        block[1] = len & 255;
+        block[2] = (len >> 8) & 255;
+        const nlen = (~len) & 65535;
+        block[3] = nlen & 255;
+        block[4] = (nlen >> 8) & 255;
+        block.set(data.subarray(offset, offset + len), 5);
+        blocks.push(block);
+        offset += len;
+      }
+      const checksum = adler32(data);
+      const output = new Uint8Array(2 + blocks.reduce((sum, block) => sum + block.length, 0) + 4);
+      let cursor = 0;
+      output[cursor++] = 0x78;
+      output[cursor++] = 0x01;
+      blocks.forEach((block) => {
+        output.set(block, cursor);
+        cursor += block.length;
+      });
+      output[cursor++] = (checksum >>> 24) & 255;
+      output[cursor++] = (checksum >>> 16) & 255;
+      output[cursor++] = (checksum >>> 8) & 255;
+      output[cursor++] = checksum & 255;
+      return output;
+    }
+
+    function adler32(data) {
+      let a = 1;
+      let b = 0;
+      for (let i = 0; i < data.length; i += 1) {
+        a = (a + data[i]) % 65521;
+        b = (b + a) % 65521;
+      }
+      return ((b << 16) | a) >>> 0;
+    }
+
+    function asciiBytes(text) {
+      const bytes = new Uint8Array(text.length);
+      for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i) & 255;
+      return bytes;
+    }
+
+    els.exportPngBottom.addEventListener("click", exportPosterPng);
+    els.printPdfBottom.addEventListener("click", exportPosterPdf);
+    window.addEventListener("resize", () => {
+      updateCanvasFit();
+      queueTypewriterRebuild();
+    });
+    document.fonts?.ready.then(() => {
+      updateCanvasFit();
+      queueTypewriterRebuild();
+    });
+
+    function bindCanvasPan() {
+      const stage = document.querySelector(".stage-wrap");
+      let active = false;
+      let startX = 0;
+      let startY = 0;
+      let startLeft = 0;
+      let startTop = 0;
+      stage.addEventListener("mousedown", (event) => {
+        if (event.button !== 1) return;
+        event.preventDefault();
+        active = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        startLeft = stage.scrollLeft;
+        startTop = stage.scrollTop;
+        stage.classList.add("is-panning");
+      });
+      window.addEventListener("mousemove", (event) => {
+        if (!active) return;
+        stage.scrollLeft = startLeft - (event.clientX - startX);
+        stage.scrollTop = startTop - (event.clientY - startY);
+      });
+      window.addEventListener("mouseup", () => {
+        active = false;
+        stage.classList.remove("is-panning");
+      });
+      stage.addEventListener("auxclick", (event) => {
+        if (event.button === 1) event.preventDefault();
+      });
+    }
+
+    applyDefaults();
+    updateCanvasFit();
+    bindCanvasPan();
+  </script>
+</body>
+</html>
