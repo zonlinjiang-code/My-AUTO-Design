@@ -6,43 +6,71 @@
   <title>图文自动排版工具</title>
   <style>
     :root {
-      --ui-bg: #f2f3ef;
-      --panel: #f9faf7;
-      --panel-2: #eceee9;
-      --ink: #111111;
-      --muted: #6a6e68;
-      --line: #d4d8d0;
-      --accent: #0a6f68;
-      --canvas-w: 760px;
-      --canvas-fit-w: min(var(--canvas-w), calc(100% - 56px));
-      --preview-scale: 1;
+      --ui-bg: #111519;
+      --stage-bg: #151a1f;
+      --stage-grid: rgba(120, 132, 146, 0.18);
+      --panel: #171c21;
+      --panel-2: #20262d;
+      --panel-3: #262d34;
+      --field-bg: #101418;
+      --field-bg-strong: #0b0e11;
+      --ink: #edf0e8;
+      --muted: #899098;
+      --line: #313840;
+      --line-strong: #4a525b;
+      --accent: #f3a31a;
+      --accent-2: #ffd35a;
+      --accent-ink: #18120a;
+      --accent-focus: rgba(243, 163, 26, 0.24);
+      --accent-soft: rgba(243, 163, 26, 0.16);
+      --dock-bg: rgba(23, 28, 33, 0.9);
+      --shadow: rgba(0, 0, 0, 0.34);
+      --canvas-fit-w: 720px;
       --poster-bg: #fffefa;
-      --main-color: #111111;
+      --main-color: #37bd16;
       --secondary-color: #111111;
       --poster-pad: 3.8%;
-      --main-size: 43px;
-      --main-latin-weight: 600;
-      --main-cjk-weight: 600;
-      --main-latin-stroke: 0.08px;
-      --main-cjk-stroke: 0.08px;
-      --main-tracking: -0.02em;
-      --main-leading: 0.94;
+      --main-size: 20px;
+      --main-latin-weight: 700;
+      --main-cjk-weight: 700;
+      --main-latin-stroke: 0px;
+      --main-cjk-stroke: 0px;
+      --cjk-size-scale: 0.9em;
+      --cjk-baseline-shift: -0.01em;
+      --main-tracking: 0em;
+      --main-leading: 0.98;
       --main-align: left;
-      --secondary-size: 11px;
-      --secondary-latin-weight: 600;
-      --secondary-cjk-weight: 600;
-      --secondary-latin-stroke: 0.08px;
-      --secondary-cjk-stroke: 0.08px;
+      --secondary-size: 10px;
       --secondary-tracking: 0em;
-      --secondary-leading: 1;
+      --secondary-leading: 1.12;
+      --main-stroke-color: #111111;
       --secondary-align: left;
       --image-scale: 1.18;
-      --image-shift: 0em;
-      --type-total: 3s;
+      --image-shift: -0.22em;
       --main-latin: Inter, Arial, sans-serif;
       --main-cjk: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
-      --secondary-latin: Inter, Arial, sans-serif;
-      --secondary-cjk: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    body[data-ui-theme="light"] {
+      --ui-bg: #eceee8;
+      --stage-bg: #f3f2ec;
+      --stage-grid: rgba(203, 205, 198, 0.38);
+      --panel: #f8f9f5;
+      --panel-2: #eef0eb;
+      --panel-3: #e3e6df;
+      --field-bg: #ffffff;
+      --field-bg-strong: #fbfcf8;
+      --ink: #151712;
+      --muted: #676d64;
+      --line: #cfd4cc;
+      --line-strong: #aeb7aa;
+      --accent: #e69112;
+      --accent-2: #ffbe30;
+      --accent-ink: #17120a;
+      --accent-focus: rgba(230, 145, 18, 0.22);
+      --accent-soft: rgba(230, 145, 18, 0.14);
+      --dock-bg: rgba(255, 255, 255, 0.92);
+      --shadow: rgba(28, 33, 24, 0.16);
     }
 
     * {
@@ -54,38 +82,184 @@
       min-height: 100vh;
       background: var(--ui-bg);
       color: var(--ink);
-      font-family: "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
+      font-family: Inter, "Helvetica Neue", Arial, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font-family: inherit;
     }
 
     .app {
+      --sidebar-width: 338px;
+      --sidebar-offset: var(--sidebar-width);
       display: grid;
-      grid-template-columns: 324px minmax(0, 1fr);
+      grid-template-columns: var(--sidebar-offset) minmax(0, 1fr);
       min-height: 100vh;
+      transition: grid-template-columns 180ms ease;
+    }
+
+    .app.sidebar-collapsed {
+      --sidebar-offset: 0px;
     }
 
     .sidebar {
+      grid-column: 1;
+      width: var(--sidebar-width);
       height: 100vh;
       overflow: auto;
-      padding: 12px;
+      padding: 14px 12px 18px;
       border-right: 1px solid var(--line);
       background: var(--panel);
+      scrollbar-color: var(--line-strong) transparent;
+      transition: transform 180ms ease;
+      z-index: 40;
     }
 
-    .sidebar h1 {
-      margin: 0 0 12px;
+    .app.sidebar-collapsed .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      transform: translateX(-100%);
+      pointer-events: none;
+    }
+
+    .app.sidebar-collapsed.sidebar-overlay-open .sidebar {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .app.sidebar-collapsed.sidebar-overlay-open .sidebar-backdrop {
+      display: block;
+    }
+
+    .app-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin: 0 0 14px;
+      padding: 8px 0 13px;
+      border-bottom: 1px solid var(--line);
+      user-select: none;
+      caret-color: transparent;
+    }
+
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .app-title {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+      gap: 10px;
+      color: var(--ink);
       font-size: 16px;
-      line-height: 1.2;
-      letter-spacing: 0;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+      caret-color: transparent;
+    }
+
+    .app-title::before {
+      content: "✦";
+      color: #ffffff;
+      font-size: 18px;
+      line-height: 1;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.28);
+    }
+
+    body[data-ui-theme="light"] .app-title::before {
+      color: #111111;
+      text-shadow: none;
+    }
+
+    .reset-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: auto;
+      min-width: 74px;
+      min-height: 34px;
+      padding: 7px 11px;
+      border-color: var(--line);
+      border-radius: 9px;
+      background: var(--field-bg-strong);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .reset-button::before {
+      content: "↻";
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .toolbar-toggle {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+      min-height: 34px;
+      padding: 0;
+      border-color: var(--line);
+      border-radius: 9px;
+      background: var(--field-bg-strong);
+      color: var(--ink);
+      user-select: none;
+      caret-color: transparent;
+    }
+
+    .toolbar-toggle::before {
+      content: "";
+      width: 14px;
+      height: 11px;
+      background:
+        linear-gradient(currentColor, currentColor) 0 1px / 14px 2px no-repeat,
+        linear-gradient(currentColor, currentColor) 0 5px / 14px 2px no-repeat,
+        linear-gradient(currentColor, currentColor) 0 9px / 14px 2px no-repeat;
+      opacity: 0.9;
+    }
+
+    .toolbar-toggle::after {
+      content: none;
+    }
+
+    .toolbar-float-toggle {
+      display: none;
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      z-index: 35;
+      background: var(--dock-bg);
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+
+    .app.sidebar-collapsed:not(.sidebar-overlay-open) .toolbar-float-toggle {
+      display: inline-grid;
     }
 
     .section {
-      padding: 10px 0;
-      border-top: 1px solid var(--line);
-    }
-
-    .section:first-of-type {
+      padding: 0;
       border-top: 0;
-      padding-top: 0;
     }
 
     .section-title {
@@ -93,39 +267,218 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
       font-size: 11px;
       font-weight: 800;
-      color: #343832;
+      color: var(--ink);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0;
+    }
+
+    .section-panel {
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+    .section:first-of-type .section-panel {
+      border-top: 0;
+    }
+
+    .section-panel > summary {
+      min-height: 50px;
+      padding: 12px 4px;
+      cursor: pointer;
+      list-style: none;
+      background: transparent;
+    }
+
+    .section-panel > summary.section-title {
+      margin-bottom: 0;
+    }
+
+    .section-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .section-panel > summary::after {
+      content: "▶";
+      margin-left: auto;
+      font-size: 7px;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .section-panel[open] > summary::after {
+      content: "▼";
+    }
+
+    .section-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: rgba(230, 145, 18, 0.34);
+      color: var(--accent-2);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .section-name {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: none;
+    }
+
+    .section-body {
+      padding: 2px 10px 11px;
     }
 
     label,
     .field {
       display: grid;
       gap: 5px;
-      margin: 6px 0;
+      margin: 8px 0;
       font-size: 11px;
-      font-weight: 700;
-      color: #3f433e;
+      font-weight: 760;
+      color: var(--muted);
     }
 
     .control-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 7px;
+      gap: 8px;
       align-items: end;
     }
 
-    .control-grid.three {
-      grid-template-columns: 1fr 1fr 1fr;
+    .color-field,
+    .stroke-field {
+      display: grid;
+      gap: 6px;
+      margin: 8px 0;
+      font-size: 11px;
+      font-weight: 760;
+      color: var(--muted);
+    }
+
+    .color-control {
+      display: grid;
+      grid-template-columns: minmax(82px, 0.9fr) minmax(112px, 1.15fr) minmax(82px, 0.9fr);
+      gap: 6px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .color-mode,
+    .color-random {
+      min-height: 34px;
+      border-radius: 8px;
+      background: var(--panel-3);
+      color: var(--ink);
+    }
+
+    .color-mode,
+    .color-random {
+      position: relative;
+      min-width: 0;
+      border-color: var(--line);
+      font-size: 12px;
+      overflow: visible;
+      padding-inline: 6px;
+    }
+
+    .color-mode::before,
+    .color-mode::after,
+    .color-random::before,
+    .color-random::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      border: 0;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      transition: background 0.16s ease;
+    }
+
+    .color-mode::before,
+    .color-random::before {
+      left: 8px;
+      background: var(--color-back, #050505);
+      z-index: 1;
+    }
+
+    .color-mode::after,
+    .color-random::after {
+      left: 16px;
+      width: 17px;
+      height: 17px;
+      background: var(--color-front, #ffffff);
+      z-index: 2;
+    }
+
+    .color-mode span,
+    .color-random span {
+      display: block;
+      padding-left: 34px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .color-value {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 6px;
+      align-items: center;
+      min-height: 34px;
+      padding: 4px 7px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--field-bg-strong);
+    }
+
+    .color-value input[type="color"] {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+    }
+
+    .color-hex {
+      min-height: 24px;
+      padding: 2px 4px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: lowercase;
+    }
+
+    .stroke-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 64px;
+      gap: 7px;
+      align-items: center;
     }
 
     .row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 68px;
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) 70px;
+      gap: 9px;
       align-items: center;
     }
 
@@ -135,28 +488,61 @@
     button {
       width: 100%;
       border: 1px solid var(--line);
-      border-radius: 4px;
-      background: #ffffff;
-      color: #151714;
+      border-radius: 6px;
+      background: var(--field-bg);
+      color: var(--ink);
       font: inherit;
       letter-spacing: 0;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus,
+    button:focus-visible {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-focus);
+    }
+
+    button:hover {
+      border-color: var(--accent-2);
+      background: var(--accent-2);
+    }
+
+    button.secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--ink);
     }
 
     input,
     select {
-      min-height: 28px;
-      padding: 5px 7px;
+      min-height: 32px;
+      padding: 5px 8px;
+    }
+
+    select {
+      appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position:
+        calc(100% - 13px) 50%,
+        calc(100% - 8px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 24px;
     }
 
     input[type="range"] {
-      min-height: 24px;
+      min-height: 26px;
       padding: 0;
-      accent-color: var(--accent);
+      accent-color: var(--muted);
     }
 
     input[type="color"] {
-      height: 30px;
-      padding: 2px;
+      height: 32px;
+      padding: 3px;
     }
 
     textarea {
@@ -164,6 +550,7 @@
       resize: vertical;
       padding: 8px;
       line-height: 1.35;
+      scrollbar-color: var(--line-strong) transparent;
     }
 
     .compact textarea {
@@ -171,60 +558,182 @@
     }
 
     button {
-      min-height: 28px;
-      padding: 6px 8px;
-      background: #171917;
-      color: #ffffff;
+      min-height: 32px;
+      padding: 6px 9px;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
       font-size: 11px;
       font-weight: 800;
       cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
     }
 
     button.secondary {
-      background: #ffffff;
-      color: #111111;
+      border-color: var(--line-strong);
+      background: var(--panel-3);
+      color: var(--ink);
     }
 
     button.is-active,
     .segmented button.is-active {
-      border-color: #111111;
-      background: #111111;
-      color: #ffffff;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
     }
 
     .segmented {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 0;
-      overflow: hidden;
+      gap: 4px;
       border: 1px solid var(--line);
-      border-radius: 4px;
-      background: #ffffff;
+      border-radius: 8px;
+      background: var(--field-bg-strong);
+      padding: 4px;
     }
 
     .segmented button {
-      min-height: 28px;
+      min-height: 30px;
       border: 0;
-      border-right: 1px solid var(--line);
-      border-radius: 0;
+      border-radius: 6px;
       background: transparent;
-      color: #111111;
-      font-size: 12px;
+      color: var(--muted);
+      font-size: 0;
+      display: inline-grid;
+      place-items: center;
     }
 
-    .segmented button:last-child {
-      border-right: 0;
+    .segmented button.is-active {
+      background: var(--panel-3);
+      color: var(--muted);
+      border-color: var(--line-strong);
+      box-shadow: inset 0 0 0 1px var(--line-strong);
+    }
+
+    .alignment-tools {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 98px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .random-letter-tool {
+      display: grid;
+      gap: 5px;
+      margin: 8px 0;
+      font-size: 11px;
+      font-weight: 760;
+      color: var(--muted);
+    }
+
+    .random-letter-tool button {
+      min-height: 40px;
+      border-color: var(--line);
+      background: var(--field-bg-strong);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .export-scale-control {
+      display: grid;
+      gap: 7px;
+      margin: 10px 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .export-scale-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .export-scale-options button {
+      min-height: 32px;
+      border-color: var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .export-scale-options button.is-active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-2);
+    }
+
+    body[data-ui-theme="light"] .export-scale-options button.is-active {
+      color: #9b5e00;
+    }
+
+    .export-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .align-icon {
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      width: 20px;
+      height: 18px;
+    }
+
+    .align-icon span {
+      display: block;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .align-left span:nth-child(1),
+    .align-left span:nth-child(3),
+    .align-right span:nth-child(1),
+    .align-right span:nth-child(3),
+    .align-center span:nth-child(1),
+    .align-center span:nth-child(3) {
+      width: 68%;
+    }
+
+    .align-left span:nth-child(2),
+    .align-right span:nth-child(2),
+    .align-center span:nth-child(2),
+    .align-justify span {
+      width: 100%;
+    }
+
+    .align-left span,
+    .align-justify span {
+      justify-self: start;
+    }
+
+    .align-center span {
+      justify-self: center;
+    }
+
+    .align-right span {
+      justify-self: end;
+    }
+
+    .align-justify span {
+      width: 100%;
     }
 
     .value {
       min-width: 54px;
       padding: 4px 5px;
       border: 1px solid var(--line);
-      border-radius: 4px;
-      background: var(--panel-2);
+      border-radius: 6px;
+      background: var(--field-bg-strong);
       text-align: center;
       font-size: 11px;
-      color: #1d211c;
+      color: var(--ink);
     }
 
     input.value {
@@ -237,9 +746,15 @@
     }
 
     input.value::-webkit-outer-spin-button,
-    input.value::-webkit-inner-spin-button {
+    input.value::-webkit-inner-spin-button,
+    .dock-value::-webkit-outer-spin-button,
+    .dock-value::-webkit-inner-spin-button {
       margin: 0;
       appearance: none;
+    }
+
+    input[type="number"] {
+      appearance: textfield;
     }
 
     .hint {
@@ -256,7 +771,7 @@
       margin: 8px 0;
       font-size: 11px;
       font-weight: 700;
-      color: #3f433e;
+      color: var(--muted);
     }
 
     .check-row input {
@@ -267,19 +782,19 @@
     }
 
     details.advanced {
-      margin: 8px 0;
+      margin: 10px 0;
       border: 1px solid var(--line);
-      border-radius: 5px;
-      background: #ffffff;
+      border-radius: 7px;
+      background: var(--field-bg-strong);
     }
 
     details.advanced summary {
-      min-height: 28px;
-      padding: 6px 9px;
+      min-height: 30px;
+      padding: 7px 9px;
       cursor: pointer;
       font-size: 11px;
       font-weight: 800;
-      color: #2c302a;
+      color: var(--ink);
       list-style: none;
     }
 
@@ -288,42 +803,33 @@
     }
 
     details.advanced summary::after {
-      content: "+";
+      content: "▶";
       float: right;
       font-weight: 900;
+      color: var(--muted);
     }
 
     details.advanced[open] summary::after {
-      content: "-";
+      content: "▼";
     }
 
     .advanced-body {
-      padding: 0 9px 8px;
-    }
-
-    .advanced.animation-panel {
-      margin-top: 0;
-      background: var(--panel-2);
-    }
-
-    .advanced.animation-panel summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      padding: 0 9px 9px;
     }
 
     .stage-wrap {
+      grid-column: 2;
       position: relative;
       min-width: 0;
       height: 100vh;
       overflow: auto;
-      padding: 78px 56px 56px;
+      padding: 58px 44px 84px;
       display: grid;
       place-items: center;
       background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-        var(--ui-bg);
+        linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px),
+        linear-gradient(0deg, var(--stage-grid) 1px, transparent 1px),
+        var(--stage-bg);
       background-size: 24px 24px;
       cursor: default;
       user-select: none;
@@ -333,53 +839,180 @@
       cursor: grabbing;
     }
 
-    .zoom-dock {
-      position: absolute;
-      top: 14px;
-      right: 18px;
-      z-index: 5;
-      display: inline-grid;
-      grid-template-columns: repeat(4, auto);
-      gap: 4px;
-      margin: 0;
-      padding: 4px;
+    .canvas-dock {
+      position: fixed;
+      left: calc(var(--sidebar-offset) + (100vw - var(--sidebar-offset)) / 2);
+      bottom: 18px;
+      z-index: 20;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: 7px;
+      max-width: min(560px, calc(100vw - var(--sidebar-offset) - 32px));
+      padding: 7px;
       border: 1px solid var(--line);
-      border-radius: 6px;
-      background: rgba(249, 250, 247, 0.92);
+      border-radius: 17px;
+      background: var(--dock-bg);
       backdrop-filter: blur(10px);
-      transform: none;
+      transform: translateX(-50%);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.13);
     }
 
-    .zoom-dock button {
+    .dock-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 38px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--panel-2);
+    }
+
+    .dock-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .dock-value {
+      width: 64px;
+      min-height: 32px;
+      padding: 4px 9px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--panel-3);
+      color: var(--ink);
+      text-align: center;
+      font-size: 14px;
+      font-weight: 900;
+      appearance: textfield;
+    }
+
+    .dock-unit {
+      margin-left: -4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .dock-select {
+      width: 150px;
+      min-height: 32px;
+      border: 0;
+      border-radius: 11px;
+      background-color: var(--panel-3);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .canvas-dock button {
       width: auto;
-      min-width: 40px;
-      min-height: 26px;
-      padding: 4px 7px;
+      min-width: 38px;
+      min-height: 38px;
+      padding: 6px 8px;
+      border-color: var(--line);
+      background: var(--panel-2);
+      color: var(--ink);
+      font-size: 13px;
+      border-radius: 13px;
+    }
+
+    .theme-icon-button {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      font-size: 0;
+      color: var(--muted);
+      overflow: hidden;
+    }
+
+    .theme-icon-button::before {
+      content: "☀";
+      font-size: 17px;
+      line-height: 1;
+      color: currentColor;
+    }
+
+    body[data-ui-theme="light"] .theme-icon-button::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: currentColor;
+      transform: translate(-50%, -50%);
+    }
+
+    body[data-ui-theme="light"] .theme-icon-button::after {
+      content: "";
+      position: absolute;
+      left: calc(50% + 7px);
+      top: calc(50% - 3px);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
       background: #ffffff;
-      color: #111111;
-      font-size: 11px;
+      transform: translate(-50%, -50%);
+    }
+
+    body[data-ui-theme="light"] .canvas-dock {
+      gap: 7px;
+      padding: 7px;
+      border-color: rgba(198, 203, 194, 0.74);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 16px 36px rgba(101, 105, 92, 0.12);
+    }
+
+    body[data-ui-theme="light"] .dock-group {
+      min-height: 38px;
+      padding: 5px 8px;
+      border-color: rgba(198, 203, 194, 0.66);
+      background: rgba(248, 249, 246, 0.72);
+    }
+
+    body[data-ui-theme="light"] .dock-label,
+    body[data-ui-theme="light"] .dock-unit {
+      color: #282b24;
+    }
+
+    body[data-ui-theme="light"] .dock-value,
+    body[data-ui-theme="light"] .dock-select {
+      background-color: #e5e7e5;
+      color: #10120d;
+    }
+
+    body[data-ui-theme="light"] .canvas-dock button {
+      border-color: rgba(198, 203, 194, 0.8);
+      background: #ffffff;
+      color: #d9dcd9;
+      box-shadow: 0 10px 22px rgba(101, 105, 92, 0.1);
     }
 
     .poster-shell {
       width: var(--canvas-fit-w);
       position: relative;
-      transform: scale(var(--preview-scale));
-      transform-origin: top center;
-      margin: auto;
     }
 
     .poster {
       width: 100%;
-      max-width: 1080px;
-      min-width: 320px;
+      min-width: 40px;
+      position: relative;
       aspect-ratio: var(--poster-ratio, 0.82);
       background: var(--poster-bg);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
+      box-shadow: 0 28px 76px var(--shadow);
       display: grid;
       grid-template-rows: 1fr auto;
       padding: var(--poster-pad);
       overflow: hidden;
-      position: relative;
     }
 
     .main-copy {
@@ -388,7 +1021,7 @@
       font-family: var(--main-latin);
       font-size: var(--main-size);
       font-weight: var(--main-latin-weight);
-      -webkit-text-stroke: var(--main-latin-stroke) currentColor;
+      -webkit-text-stroke: var(--main-latin-stroke) var(--main-stroke-color);
       paint-order: stroke fill;
       line-height: var(--main-leading);
       letter-spacing: var(--main-tracking);
@@ -406,10 +1039,10 @@
       align-items: end;
       margin-top: 22px;
       color: var(--secondary-color);
-      font-family: var(--secondary-latin);
+      font-family: var(--main-latin);
       font-size: var(--secondary-size);
-      font-weight: var(--secondary-latin-weight);
-      -webkit-text-stroke: var(--secondary-latin-stroke) currentColor;
+      font-weight: var(--main-latin-weight);
+      -webkit-text-stroke: 0 currentColor;
       paint-order: stroke fill;
       line-height: var(--secondary-leading);
       letter-spacing: var(--secondary-tracking);
@@ -430,14 +1063,24 @@
 
     .cjk-main {
       font-family: var(--main-cjk);
+      position: relative;
+      top: var(--cjk-baseline-shift);
+      font-size: var(--cjk-size-scale);
       font-weight: var(--main-cjk-weight);
-      -webkit-text-stroke: var(--main-cjk-stroke) currentColor;
+      -webkit-text-stroke: var(--main-cjk-stroke) var(--main-stroke-color);
+      line-height: inherit;
+      vertical-align: baseline;
     }
 
     .cjk-secondary {
-      font-family: var(--secondary-cjk);
-      font-weight: var(--secondary-cjk-weight);
-      -webkit-text-stroke: var(--secondary-cjk-stroke) currentColor;
+      font-family: var(--main-cjk);
+      position: relative;
+      top: var(--cjk-baseline-shift);
+      font-size: var(--cjk-size-scale);
+      font-weight: var(--main-cjk-weight);
+      -webkit-text-stroke: 0 currentColor;
+      line-height: inherit;
+      vertical-align: baseline;
     }
 
     .random-letter {
@@ -448,14 +1091,11 @@
     .inline-image {
       display: inline-flex;
       width: calc(1em * var(--image-scale));
-      height: calc(1em * var(--image-scale) * 0.72);
+      height: calc(1em * var(--image-scale) * 0.84);
       margin: 0 0.08em;
-      vertical-align: middle;
+      vertical-align: var(--image-shift);
       align-items: center;
       justify-content: center;
-      transform: translateY(var(--image-shift));
-      overflow: hidden;
-      line-height: 1;
     }
 
     .inline-image img {
@@ -472,8 +1112,6 @@
       font-size: 0.34em;
       font-weight: 800;
       letter-spacing: 0;
-      background: rgba(255, 255, 255, 0.28);
-      line-height: 1;
     }
 
     .paren {
@@ -483,158 +1121,97 @@
       letter-spacing: 0;
     }
 
-    .typewriter-layer {
+    .typewriter-cover-layer {
       position: absolute;
       inset: 0;
-      z-index: 5;
-      display: none;
+      z-index: 12;
       pointer-events: none;
     }
 
-    .poster.typewriter-on .main-copy,
-    .poster.typewriter-on .secondary-copy {
-      opacity: 0;
-    }
-
-    .poster.typewriter-on .typewriter-layer {
-      display: block;
-    }
-
-    .typewriter-char,
-    .typewriter-image-unit {
+    .typewriter-cover {
       position: absolute;
-      opacity: 0;
-      animation: typewriterUnitReveal var(--type-unit-duration, 70ms) steps(1, end) forwards;
-      animation-delay: var(--type-delay, 0ms);
-    }
-
-    .typewriter-char {
-      white-space: pre;
-      transform-origin: 0 70%;
-    }
-
-    .typewriter-image-unit {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .typewriter-image-unit img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    @keyframes typewriterUnitReveal {
-      to {
-        opacity: 1;
-      }
+      border-radius: 1px;
+      background: var(--poster-bg);
+      will-change: opacity;
     }
 
     @media (max-width: 900px) {
       .app {
-        grid-template-columns: 1fr;
+        grid-template-columns: var(--sidebar-offset) minmax(0, 1fr);
       }
 
       .sidebar {
-        height: auto;
-        max-height: none;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
+        height: 100vh;
+        max-height: 100vh;
+        border-right: 1px solid var(--line);
+        border-bottom: 0;
       }
 
       .stage-wrap {
-        height: auto;
-        min-height: 80vh;
-        padding: 42px 16px 16px;
+        height: 100vh;
+        min-height: 100vh;
+        padding: 42px 16px 96px;
+      }
+
+      .canvas-dock {
+        bottom: 14px;
+        max-width: calc(100vw - 24px);
       }
 
       .poster-shell {
-        width: min(var(--canvas-w), 100%);
+        width: min(var(--canvas-fit-w), 100%);
       }
 
       .poster {
         width: 100%;
-      }
-    }
-
-    @media print {
-      body {
-        background: #ffffff;
-      }
-
-      .sidebar,
-      .zoom-dock {
-        display: none;
-      }
-
-      .app,
-      .stage-wrap {
-        display: block;
-        height: auto;
-        min-height: 0;
-        padding: 0;
-        background: #ffffff;
-      }
-
-      .poster-shell {
-        width: 100%;
-        transform: none;
-      }
-
-      .poster {
-        width: 100%;
-        box-shadow: none;
       }
     }
   </style>
 </head>
-<body>
-  <main class="app">
+<body data-ui-theme="light">
+  <main class="app" id="app">
+    <button id="sidebarFloatingToggle" class="toolbar-toggle toolbar-float-toggle" type="button" aria-label="打开工具栏" aria-expanded="false"></button>
+    <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
     <aside class="sidebar" aria-label="排版控制">
-      <h1>图文自动排版工具</h1>
+      <div class="app-header">
+        <div class="app-title">Auto-Zonglin tools</div>
+        <div class="header-actions">
+          <button id="resetDefaults" class="reset-button" type="button">Reset</button>
+          <button id="sidebarToggle" class="toolbar-toggle" type="button" aria-label="折叠工具栏" aria-expanded="true"></button>
+        </div>
+      </div>
 
       <section class="section">
-        <label>
-          画布宽度
-          <div class="row">
-            <input id="canvasWidth" type="range" min="360" max="1080" value="760">
-            <input id="canvasWidthValue" class="value" type="number" min="360" max="1080" value="760" aria-label="画布宽度数值">
+        <details class="section-panel" open>
+          <summary class="section-title"><span class="section-icon">W</span><span class="section-name">画布大小</span></summary>
+          <div class="section-body">
+            <label>
+              画布大小
+              <div class="row">
+                <input id="canvasWidth" type="range" min="10" max="100" value="100">
+                <input id="canvasWidthValue" class="value" type="number" min="10" max="100" value="100" aria-label="画布显示大小百分比">
+              </div>
+            </label>
           </div>
-        </label>
-        <label>
-          画布比例
-          <select id="canvasRatio">
-            <option value="1">1:1 正方形</option>
-            <option value="0.75" selected>3:4 竖版</option>
-            <option value="0.5625">9:16 竖屏</option>
-            <option value="1.7777778">16:9 横屏</option>
-            <option value="0.7070707">A4 竖版</option>
-          </select>
-        </label>
-        <div class="control-grid">
-          <label>
-            背景色
-            <input id="posterBg" type="color" value="#fffefa">
-          </label>
-          <label>
-            正文字色
-            <input id="mainColor" type="color" value="#111111">
-          </label>
-        </div>
+        </details>
       </section>
 
       <section class="section">
-        <div class="section-title">正文</div>
-        <details class="advanced">
-          <summary>正文内容</summary>
-          <div class="advanced-body">
+        <details class="section-panel" open>
+          <summary class="section-title"><span class="section-icon">T</span><span class="section-name">Text 文本</span></summary>
+          <div class="section-body">
             <label>
               文字内容
               <textarea id="mainText" spellcheck="false"></textarea>
             </label>
           </div>
         </details>
+      </section>
+
+      <section class="section">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">A</span><span class="section-name">Type 字符</span></summary>
+          <div class="section-body">
         <div class="control-grid">
           <label>
             英文字体
@@ -662,8 +1239,8 @@
               <option value="300">Light 300</option>
               <option value="400">Regular 400</option>
               <option value="500">Medium 500</option>
-              <option value="600" selected>SemiBold 600</option>
-              <option value="700">Bold 700</option>
+              <option value="600">SemiBold 600</option>
+              <option value="700" selected>Bold 700</option>
               <option value="760">Poster 760</option>
               <option value="900">Black 900</option>
             </select>
@@ -674,22 +1251,11 @@
               <option value="300">300</option>
               <option value="400">400</option>
               <option value="500">500</option>
-              <option value="600" selected>600</option>
-              <option value="700">700</option>
+              <option value="600">600</option>
+              <option value="700" selected>700</option>
               <option value="760">760</option>
               <option value="900">900</option>
             </select>
-          </label>
-        </div>
-        <div class="control-grid">
-          <label>
-            对齐
-            <div class="segmented" data-align-group="main">
-              <button type="button" data-align="left" class="is-active">L</button>
-              <button type="button" data-align="center">C</button>
-              <button type="button" data-align="right">R</button>
-              <button type="button" data-align="justify">J</button>
-            </div>
           </label>
         </div>
         <details class="advanced">
@@ -698,141 +1264,100 @@
             <label>
               字号
               <div class="row">
-                <input id="mainSize" type="range" min="20" max="86" value="43">
-                <input id="mainSizeValue" class="value" type="number" min="20" max="86" value="43" aria-label="正文字号数值">
+                <input id="mainSize" type="range" min="5" max="100" value="20">
+                <input id="mainSizeValue" class="value" type="number" min="5" max="100" value="20" aria-label="正文字号数值">
               </div>
             </label>
             <label>
               字间距
               <div class="row">
-                <input id="mainTracking" type="range" min="-8" max="10" value="-2">
-                <input id="mainTrackingValue" class="value" type="number" min="-8" max="10" value="-2" aria-label="正文字间距数值">
+                <input id="mainTracking" type="range" min="-8" max="10" value="0">
+                <input id="mainTrackingValue" class="value" type="number" min="-8" max="10" value="0" aria-label="正文字间距数值">
               </div>
             </label>
             <label>
               行间距
               <div class="row">
-                <input id="mainLeading" type="range" min="78" max="150" value="94">
-                <input id="mainLeadingValue" class="value" type="number" min="78" max="150" value="94" aria-label="正文行间距数值">
+                <input id="mainLeading" type="range" min="78" max="150" value="98">
+                <input id="mainLeadingValue" class="value" type="number" min="78" max="150" value="98" aria-label="正文行间距数值">
               </div>
             </label>
           </div>
         </details>
-        <div class="control-grid">
-          <div class="field">
+        <div class="alignment-tools">
+          <label>
+            对齐方式
+            <div class="segmented" data-align-group="main">
+              <button type="button" data-align="left" class="is-active" aria-label="左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="center" aria-label="居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="right" aria-label="右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="justify" aria-label="两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
+            </div>
+          </label>
+          <div class="random-letter-tool">
             随机字母
-            <button id="randomLetters" class="secondary" type="button">开启随机大小</button>
+            <button id="randomLetters" class="secondary" type="button">随机字母大小</button>
           </div>
         </div>
-      </section>
-
-      <section class="section">
-        <div class="section-title">括号图片</div>
-        <div class="control-grid">
-          <button id="pickFolder" type="button">选择文件夹</button>
-          <button id="shuffleImages" class="secondary" type="button">随机图片</button>
-        </div>
-        <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple hidden>
-        <p id="folderStatus" class="hint">尚未选择图片文件夹。文字里的空花括号会先显示为 IMG 占位框。</p>
-        <div class="control-grid">
-          <label>
-            图片大小
-            <div class="row">
-              <input id="imageScale" type="range" min="60" max="300" value="118">
-              <input id="imageScaleValue" class="value" type="number" min="60" max="300" value="118" aria-label="图片大小数值">
+        <div class="color-field">
+          文字颜色
+          <div class="color-control">
+            <button id="mainColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <div class="color-value">
+              <input id="mainColor" type="color" value="#37bd16">
+              <input id="mainColorHex" class="color-hex" type="text" value="#37bd16" aria-label="文字颜色色号" spellcheck="false">
             </div>
-          </label>
-          <label>
-            图片基线
-            <div class="row">
-              <input id="imageShift" type="range" min="-45" max="30" value="0">
-              <input id="imageShiftValue" class="value" type="number" min="-45" max="30" value="0" aria-label="图片基线数值">
-            </div>
-          </label>
+            <button id="randomMainColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+          </div>
         </div>
-        <label class="check-row">
-          <input id="randomRemoveBg" type="checkbox">
-          随机去背景
-        </label>
+        <div class="stroke-field">
+          描边
+          <div class="color-control">
+            <button id="mainStrokeColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <div class="color-value">
+              <input id="mainStrokeColor" type="color" value="#111111">
+              <input id="mainStrokeColorHex" class="color-hex" type="text" value="#111111" aria-label="描边颜色色号" spellcheck="false">
+            </div>
+            <button id="randomMainStrokeColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+          </div>
+          <div class="stroke-row">
+            <input id="mainStrokeWidth" type="range" min="0" max="8" step="0.5" value="0">
+            <input id="mainStrokeWidthValue" class="value" type="number" min="0" max="8" step="0.5" value="0" aria-label="描边宽度">
+          </div>
+        </div>
+          </div>
+        </details>
       </section>
 
       <section class="section compact">
-        <div class="section-title">底部文字</div>
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">T</span><span class="section-name">Text 副文本</span></summary>
+          <div class="section-body">
         <details class="advanced">
           <summary>底部文字</summary>
           <div class="advanced-body">
-            <div class="control-grid">
-              <label>
-                左侧长栏
-                <textarea id="footerOne" spellcheck="false"></textarea>
-              </label>
-              <label>
-                中间长栏
-                <textarea id="footerTwo" spellcheck="false"></textarea>
-              </label>
-            </div>
+            <label>
+              左侧长栏
+              <textarea id="footerOne" spellcheck="false"></textarea>
+            </label>
+            <label>
+              中间长栏
+              <textarea id="footerTwo" spellcheck="false"></textarea>
+            </label>
             <label>
               右侧小栏
               <textarea id="footerThree" spellcheck="false"></textarea>
             </label>
           </div>
         </details>
-        <div class="control-grid">
-          <label>
-            英文字体
-            <select id="secondaryLatin">
-              <option value='Inter, Arial, sans-serif'>Inter</option>
-              <option value='Arial, "Arial Black", sans-serif'>Arial / Arial Black</option>
-              <option value='Impact, "Arial Narrow", sans-serif'>Impact</option>
-              <option value='"Franklin Gothic Medium", Arial, sans-serif'>Franklin Gothic</option>
-            </select>
-          </label>
-          <label>
-            中文字体
-            <select id="secondaryCjk">
-              <option value='"Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif'>Noto Sans SC</option>
-              <option value='"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'>思源黑体</option>
-              <option value='MiSans, "Microsoft YaHei", "Noto Sans SC", sans-serif'>小米兰亭黑</option>
-              <option value='"Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif'>微软雅黑 UI</option>
-            </select>
-          </label>
-        </div>
-        <div class="control-grid">
-          <label>
-            字色
-            <input id="secondaryColor" type="color" value="#111111">
-          </label>
-          <label>
-            英文字重
-            <select id="secondaryLatinWeight">
-              <option value="300">300</option>
-              <option value="400">400</option>
-              <option value="500">500</option>
-              <option value="600" selected>600</option>
-              <option value="720">720</option>
-              <option value="900">900</option>
-            </select>
-          </label>
-          <label>
-            中文字重
-            <select id="secondaryCjkWeight">
-              <option value="300">300</option>
-              <option value="400">400</option>
-              <option value="500">500</option>
-              <option value="600" selected>600</option>
-              <option value="720">720</option>
-              <option value="900">900</option>
-            </select>
-          </label>
-        </div>
         <details class="advanced">
           <summary>字号 / 字间距 / 行间距</summary>
           <div class="advanced-body">
             <label>
               字号
               <div class="row">
-                <input id="secondarySize" type="range" min="8" max="30" value="11">
-                <input id="secondarySizeValue" class="value" type="number" min="8" max="30" value="11" aria-label="底部字号数值">
+                <input id="secondarySize" type="range" min="8" max="30" value="10">
+                <input id="secondarySizeValue" class="value" type="number" min="8" max="30" value="10" aria-label="底部字号数值">
               </div>
             </label>
             <label>
@@ -845,38 +1370,96 @@
             <label>
               行间距
               <div class="row">
-                <input id="secondaryLeading" type="range" min="80" max="160" value="100">
-                <input id="secondaryLeadingValue" class="value" type="number" min="80" max="160" value="100" aria-label="底部行间距数值">
+                <input id="secondaryLeading" type="range" min="80" max="160" value="112">
+                <input id="secondaryLeadingValue" class="value" type="number" min="80" max="160" value="112" aria-label="底部行间距数值">
               </div>
             </label>
           </div>
         </details>
+        <div class="color-field">
+          文字颜色
+          <div class="color-control">
+            <button id="secondaryColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <div class="color-value">
+              <input id="secondaryColor" type="color" value="#111111">
+              <input id="secondaryColorHex" class="color-hex" type="text" value="#111111" aria-label="底部文字颜色色号" spellcheck="false">
+            </div>
+            <button id="randomSecondaryColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+          </div>
+        </div>
         <div class="control-grid">
           <label>
-            对齐
+            对齐方式
             <div class="segmented" data-align-group="secondary">
-              <button type="button" data-align="left" class="is-active">L</button>
-              <button type="button" data-align="center">C</button>
-              <button type="button" data-align="right">R</button>
-              <button type="button" data-align="justify">J</button>
+              <button type="button" data-align="left" class="is-active" aria-label="左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="center" aria-label="居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="right" aria-label="右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="justify" aria-label="两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
             </div>
           </label>
         </div>
+          </div>
+        </details>
       </section>
 
       <section class="section">
-        <details id="animationPanel" class="advanced animation-panel">
-          <summary>打字机动画</summary>
-          <div class="advanced-body">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">I</span><span class="section-name">Image 图片</span></summary>
+          <div class="section-body">
+            <div class="control-grid">
+              <button id="pickFolder" type="button">选择文件夹</button>
+              <button id="shuffleImages" class="secondary" type="button">随机图片</button>
+            </div>
+            <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple hidden>
+            <p id="folderStatus" class="hint">尚未选择图片文件夹。文字里的空花括号会先显示为占位框。</p>
+            <div class="control-grid">
+              <label>
+                图片大小
+                <div class="row">
+                  <input id="imageScale" type="range" min="60" max="300" value="118">
+                  <input id="imageScaleValue" class="value" type="number" min="60" max="300" value="118" aria-label="图片大小数值">
+                </div>
+              </label>
+              <label>
+                图片基线
+                <div class="row">
+                  <input id="imageShift" type="range" min="-45" max="30" value="-22">
+                  <input id="imageShiftValue" class="value" type="number" min="-45" max="30" value="-22" aria-label="图片基线数值">
+                </div>
+              </label>
+            </div>
+            <label class="check-row">
+              <input id="randomRemoveBg" type="checkbox">
+              随机去背景
+            </label>
+            <div class="color-field">
+              背景色
+              <div class="color-control">
+                <button id="posterBgMode" class="color-mode is-light secondary" type="button"><span>黑/白</span></button>
+                <div class="color-value">
+                  <input id="posterBg" type="color" value="#fffefa">
+                  <input id="posterBgHex" class="color-hex" type="text" value="#fffefa" aria-label="背景色色号" spellcheck="false">
+                </div>
+                <button id="randomPosterBg" class="color-random is-front secondary" type="button"><span>随机</span></button>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">M</span><span class="section-name">Motion 动画</span></summary>
+          <div class="section-body">
             <label class="check-row">
               <input id="typewriterToggle" type="checkbox">
-              启用逐字出现
+              打字机动画
             </label>
             <label>
-              打字机速度
+              出现时间
               <div class="row">
-                <input id="typewriterSpeed" type="range" min="10" max="180" step="5" value="80">
-                <input id="typewriterSpeedValue" class="value" type="number" min="10" max="180" step="5" value="80" aria-label="每秒出现字符数">
+                <input id="typewriterDuration" type="range" min="1" max="12" step="0.5" value="3">
+                <input id="typewriterDurationValue" class="value" type="number" min="1" max="12" step="0.5" value="3" aria-label="打字机动画秒数">
               </div>
             </label>
           </div>
@@ -884,22 +1467,30 @@
       </section>
 
       <section class="section">
-        <div class="section-title">导出</div>
-        <div class="control-grid">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">↓</span><span class="section-name">Export 导出</span></summary>
+          <div class="section-body">
+        <div class="export-scale-control">
+          SCALE
+          <div class="export-scale-options" data-export-scale-group>
+            <button type="button" class="is-active" data-export-scale="1">1x</button>
+            <button type="button" data-export-scale="2">2x</button>
+            <button type="button" data-export-scale="3">3x</button>
+          </div>
+        </div>
+        <p id="exportSize" class="hint">输出：760 × 1013 px</p>
+        <p id="exportStatus" class="hint">导出会按照下方 W/H 的真实画板尺寸生成文件。</p>
+        <div class="export-actions">
           <button id="exportPngBottom" type="button">导出 PNG</button>
           <button id="printPdfBottom" class="secondary" type="button">导出 PDF</button>
+          <button id="exportMp4Bottom" class="secondary" type="button">导出 MP4</button>
         </div>
-        <p id="exportStatus" class="hint">PNG 和 PDF 使用同一张海报渲染结果生成，保持内容一致。</p>
+          </div>
+        </details>
       </section>
     </aside>
 
     <section class="stage-wrap" aria-label="海报预览">
-      <div class="zoom-dock" aria-label="画布快捷宽度">
-        <button type="button" data-scale="0.35" title="预览缩放 35%">35%</button>
-        <button type="button" data-scale="0.5" title="预览缩放 50%">50%</button>
-        <button type="button" data-scale="0.75" title="预览缩放 75%">75%</button>
-        <button type="button" data-scale="1" title="预览缩放 100%">100%</button>
-      </div>
       <div id="posterShell" class="poster-shell">
         <article id="poster" class="poster">
           <div id="mainCopy" class="main-copy" lang="zh-CN"></div>
@@ -908,27 +1499,55 @@
             <div id="footerTwoOut"></div>
             <div id="footerThreeOut"></div>
           </footer>
-          <div id="typewriterLayer" class="typewriter-layer" aria-hidden="true"></div>
         </article>
+      </div>
+      <div class="canvas-dock" aria-label="画布快捷设置">
+        <div class="dock-group">
+          <span class="dock-label">W</span>
+          <input id="canvasWidthDock" class="dock-value" type="number" min="100" max="1080" value="760" aria-label="画布宽度">
+          <span class="dock-unit">px</span>
+          <span class="dock-label">H</span>
+          <input id="canvasHeightDock" class="dock-value" type="number" min="100" max="1920" value="1013" aria-label="画布高度">
+          <span class="dock-unit">px</span>
+        </div>
+        <div class="dock-group">
+          <span class="dock-label">Ratio</span>
+          <select id="canvasRatio" class="dock-select" aria-label="画布比例">
+            <option value="custom">Custom</option>
+            <option value="1.7777778">HD 16:9</option>
+            <option value="1">Square 1:1</option>
+            <option value="1.3333333">4:3</option>
+            <option value="0.5625">Portrait 9:16</option>
+            <option value="0.75" selected>Portrait 3:4</option>
+            <option value="0.7070707">A4</option>
+          </select>
+        </div>
+        <button id="themeToggle" class="theme-icon-button secondary" type="button" aria-label="切换亮暗界面"></button>
       </div>
     </section>
   </main>
 
   <script>
     const defaults = {
-      mainText: "AUTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images { } / choose a folder and let every text marker become an inline visual interruption { } / the layout engine keeps typography, image scale, color, rhythm, and spacing in a controlled editorial flow { } / when the image size changes, the surrounding leading follows the same visual proportion / { } / English copy leads the reading path, while Chinese annotation follows as a second voice { } / this page behaves like a compact poster studio: select a ratio, tune the weight, adjust tracking, and export the canvas for design tests { } / { } / use repeated braces as image beats, pauses, fragments, and small collisions inside the sentence / { } / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / 中文说明在后方补充功能语义与使用场景，帮助中英文内容在同一个画面中保持清晰阅读节奏 { } / the final canvas can be exported as PNG or PDF for poster studies, layout archives, and visual collections { } / { } / { } / { } / { } /",
-      footerOne: "We can try to integrate technology with our daily lives and randomly mix text and emojis.",
-      footerTwo: "When emojis become a part of our lives, symbols can also become sounds.",
-      footerThree: "/ From OpenAI Codex / Zonglin"
+      mainText: "AUTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images { } / choose a folder and let every text marker become an inline visual interruption { } / typography, image scale, color, rhythm, and spacing can be adjusted while the composition keeps reflowing { } / English copy leads the reading path, with Chinese annotation following as a second voice { } / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / the final canvas can be exported as PNG or PDF for poster tests, layout studies, and visual collections { } / 中文说明在后方补充功能语义与使用场景 { } / { } / { } / { }",
+      footerOne: "We look at all the different topics in the world from our perspective.\n从不同视角收集图像与文字。",
+      footerTwo: "And we're collecting these themes and creating them in various new forms.\n让图文搭配生成新的版式。",
+      footerThree: "/ Collected by Zonglin"
     };
+
     const els = Object.fromEntries(Array.from(document.querySelectorAll("[id]")).map((el) => [el.id, el]));
     const state = {
       imageItems: [],
       imageOrder: [],
       randomLetter: false,
-      baseMainLeading: Number(document.querySelector("#mainLeading")?.value || 94),
-      baseSecondaryLeading: Number(document.querySelector("#secondaryLeading")?.value || 100),
-      baseImageScale: Number(document.querySelector("#imageScale")?.value || 118),
+      loadToken: 0,
+      exportScale: 1,
+      typewriterTimer: 0,
+      typewriterFrame: 0,
+      typewriterPlaying: false,
+      typewriterCoverItems: [],
+      sidebarUserCollapsed: false,
+      sidebarOverlayOpen: false,
       seed: Date.now()
     };
 
@@ -1000,23 +1619,33 @@
       state.imageOrder = shuffle(state.imageItems);
     }
 
-    function imageSlot(index) {
+    function imageSlot(index, marker = "{ }") {
+      const bracketMap = {
+        "(": [ "(", ")" ],
+        "（": [ "（", "）" ],
+        "【": [ "【", "】" ],
+        "[": [ "[", "]" ],
+        "｛": [ "｛", "｝" ],
+        "{": [ "{", "}" ]
+      };
+      const [open, close] = bracketMap[marker.trim()[0]] || [ "{", "}" ];
       const items = state.imageOrder.length ? state.imageOrder : state.imageItems;
       const item = items[index % Math.max(items.length, 1)];
       if (!item) {
-        return `<span class="paren">{</span><span class="inline-image empty-image">IMG</span><span class="paren">}</span>`;
+        return `<span class="paren">${open}</span><span class="inline-image empty-image">IMG</span><span class="paren">${close}</span>`;
       }
       const useCutout = els.randomRemoveBg.checked && item.cutout && item.clearSubject && seeded(index, 701) > 0.34;
       const src = useCutout ? item.cutout : item.src;
-      return `<span class="paren">{</span><span class="inline-image"><img src="${src}" alt=""></span><span class="paren">}</span>`;
+      return `<span class="paren">${open}</span><span class="inline-image"><img src="${src}" alt=""></span><span class="paren">${close}</span>`;
     }
 
     function renderMain() {
-      const parts = els.mainText.value.split(/(\{\s*\}|｛\s*｝)/g);
+      const imageMarkerPattern = /^(\{\s*\}|｛\s*｝|\(\s*\)|（\s*）|【\s*】|\[\s*\])$/;
+      const parts = els.mainText.value.split(/(\{\s*\}|｛\s*｝|\(\s*\)|（\s*）|【\s*】|\[\s*\])/g);
       let slot = 0;
       els.mainCopy.innerHTML = parts.map((part) => {
-        if (/^(\{\s*\}|｛\s*｝)$/.test(part)) {
-          const markup = imageSlot(slot);
+        if (imageMarkerPattern.test(part)) {
+          const markup = imageSlot(slot, part);
           slot += 1;
           return markup;
         }
@@ -1032,146 +1661,167 @@
       refreshTypewriter();
     }
 
-    function refreshTypewriter() {
-      const speed = Number(els.typewriterSpeed?.value || 80);
-      setVar("--type-speed", `${speed}`);
-      els.poster.classList.toggle("typewriter-on", Boolean(els.typewriterToggle?.checked));
-      if (!els.typewriterToggle?.checked || !els.typewriterLayer) {
-        if (els.typewriterLayer) els.typewriterLayer.innerHTML = "";
+    function refreshTypewriter({ restart = false } = {}) {
+      if (!els.typewriterToggle?.checked) {
+        clearTypewriterTimer();
+        disableTypewriter();
         return;
       }
-      buildTypewriterLayer(speed);
+      if (!restart) {
+        clearTypewriterTimer();
+        completeTypewriter();
+        return;
+      }
+      startTypewriterMaskAnimation();
     }
 
-    function buildTypewriterLayer(speed) {
-      const posterRect = els.poster.getBoundingClientRect();
-      const correction = posterRect.width ? els.poster.offsetWidth / posterRect.width : 1;
-      const units = [];
-      collectTypewriterUnits(els.mainCopy, posterRect, correction, units);
-      collectTypewriterUnits(document.querySelector(".secondary-copy"), posterRect, correction, units);
-      const charsPerSecond = Math.max(10, Number(speed) || 80);
-      const step = Math.max(6, 1000 / charsPerSecond);
-      const unitDuration = Math.min(90, Math.max(24, step * 0.85));
-      const fragment = document.createDocumentFragment();
+    function startTypewriterMaskAnimation() {
+      clearTypewriterTimer();
+      removeTypewriterCovers();
+      const items = buildTypewriterCovers();
+      const seconds = Math.max(0.2, Number(els.typewriterDuration?.value || 3));
+      const startedAt = performance.now();
+      state.typewriterPlaying = true;
 
-      units.forEach((unit, index) => {
-        const node = unit.kind === "element" ? createTypewriterElement(unit) : createTypewriterChar(unit);
-        node.style.setProperty("--type-delay", `${index * step}ms`);
-        node.style.setProperty("--type-unit-duration", `${unitDuration}ms`);
-        fragment.appendChild(node);
-      });
-
-      els.typewriterLayer.replaceChildren(fragment);
-    }
-
-    function collectTypewriterUnits(root, posterRect, correction, units) {
-      if (!root) return;
-      const range = document.createRange();
-      const localRect = (rect) => ({
-        left: (rect.left - posterRect.left) * correction,
-        top: (rect.top - posterRect.top) * correction,
-        width: rect.width * correction,
-        height: rect.height * correction
-      });
-      const visit = (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent || "";
-          const segments = segmentText(text);
-          for (const segment of segments) {
-            range.setStart(node, segment.start);
-            range.setEnd(node, segment.end);
-            const rect = Array.from(range.getClientRects()).find((item) => item.width || item.height);
-            if (rect && segment.text.trim()) {
-              units.push({ kind: "text", char: segment.text, rect: localRect(rect), parent: node.parentElement });
-            }
-          }
+      const tick = (now) => {
+        const progress = Math.min(1, (now - startedAt) / (seconds * 1000));
+        setTypewriterCoverReveal(items, Math.floor(progress * items.length));
+        if (progress < 1) {
+          state.typewriterFrame = requestAnimationFrame(tick);
           return;
         }
-
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
-        if (node.classList.contains("paren") || node.classList.contains("inline-image")) {
-          const rect = node.getBoundingClientRect();
-          if (rect.width || rect.height) units.push({ kind: "element", source: node, rect: localRect(rect) });
-          return;
-        }
-
-        node.childNodes.forEach(visit);
+        setTypewriterCoverReveal(items, items.length);
+        state.typewriterTimer = window.setTimeout(() => {
+          completeTypewriter();
+        }, 80);
       };
+      setTypewriterCoverReveal(items, 0);
+      state.typewriterFrame = requestAnimationFrame(tick);
+    }
 
-      root.childNodes.forEach(visit);
+    function clearTypewriterTimer() {
+      if (state.typewriterTimer) {
+        window.clearTimeout(state.typewriterTimer);
+        state.typewriterTimer = 0;
+      }
+      if (state.typewriterFrame) {
+        window.cancelAnimationFrame(state.typewriterFrame);
+        state.typewriterFrame = 0;
+      }
+    }
+
+    function completeTypewriter() {
+      removeTypewriterCovers();
+      state.typewriterTimer = 0;
+      state.typewriterFrame = 0;
+      state.typewriterPlaying = false;
+    }
+
+    function disableTypewriter() {
+      removeTypewriterCovers();
+      state.typewriterTimer = 0;
+      state.typewriterFrame = 0;
+      state.typewriterPlaying = false;
+    }
+
+    function buildTypewriterCovers() {
+      const layer = document.createElement("div");
+      layer.className = "typewriter-cover-layer";
+      const posterRect = els.poster.getBoundingClientRect();
+      const bg = getComputedStyle(els.poster).backgroundColor;
+      const targets = collectTypewriterTargets([els.mainCopy, document.querySelector(".secondary-copy")]);
+      const items = [];
+
+      targets.forEach((target) => {
+        const rects = target.type === "text"
+          ? getTextTargetRects(target)
+          : Array.from(target.node.getClientRects());
+        const covers = rects.map((rect) => createTypewriterCover(rect, posterRect, bg)).filter(Boolean);
+        if (covers.length) {
+          covers.forEach((cover) => layer.appendChild(cover));
+          items.push(covers);
+        }
+      });
+
+      els.poster.appendChild(layer);
+      state.typewriterCoverItems = items;
+      return items;
+    }
+
+    function collectTypewriterTargets(roots) {
+      const targets = [];
+      const walk = (node) => {
+        if (!node) return;
+        if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("inline-image")) {
+          targets.push({ type: "element", node });
+          return;
+        }
+        if (node.nodeType === Node.TEXT_NODE) {
+          tokenizeWithOffsets(node.textContent || "").forEach((token) => {
+            if (!/^\s+$/.test(token.value)) {
+              targets.push({ type: "text", node, start: token.start, end: token.end });
+            }
+          });
+          return;
+        }
+        node.childNodes.forEach(walk);
+      };
+      roots.forEach(walk);
+      return targets;
+    }
+
+    function tokenizeWithOffsets(text) {
+      const tokens = [];
+      const pattern = /[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|\s+|./gu;
+      let match;
+      while ((match = pattern.exec(text))) {
+        tokens.push({ value: match[0], start: match.index, end: match.index + match[0].length });
+      }
+      return tokens;
+    }
+
+    function getTextTargetRects(target) {
+      const range = document.createRange();
+      range.setStart(target.node, target.start);
+      range.setEnd(target.node, target.end);
+      const rects = Array.from(range.getClientRects());
       range.detach();
+      return rects;
     }
 
-    function createTypewriterChar(unit) {
-      const span = document.createElement("span");
-      const style = getComputedStyle(unit.parent);
-      span.className = "typewriter-char";
-      span.textContent = unit.char;
-      span.style.left = `${unit.rect.left}px`;
-      span.style.top = `${unit.rect.top}px`;
-      span.style.fontFamily = style.fontFamily;
-      span.style.fontSize = style.fontSize;
-      span.style.fontStyle = style.fontStyle;
-      span.style.fontWeight = style.fontWeight;
-      span.style.letterSpacing = style.letterSpacing;
-      span.style.lineHeight = style.lineHeight;
-      span.style.color = style.color;
-      span.style.webkitTextStrokeWidth = style.webkitTextStrokeWidth;
-      span.style.webkitTextStrokeColor = style.webkitTextStrokeColor;
-      return span;
+    function createTypewriterCover(rect, posterRect, bg) {
+      if (!rect.width || !rect.height) return null;
+      const pad = 1.5;
+      const cover = document.createElement("span");
+      cover.className = "typewriter-cover";
+      cover.style.background = bg;
+      cover.style.left = `${rect.left - posterRect.left - pad}px`;
+      cover.style.top = `${rect.top - posterRect.top - pad}px`;
+      cover.style.width = `${rect.width + pad * 2}px`;
+      cover.style.height = `${rect.height + pad * 2}px`;
+      return cover;
     }
 
-    function createTypewriterElement(unit) {
-      const span = unit.source.cloneNode(true);
-      const style = getComputedStyle(unit.source);
-      span.classList.add("typewriter-image-unit");
-      span.style.left = `${unit.rect.left}px`;
-      span.style.top = `${unit.rect.top}px`;
-      span.style.width = `${unit.rect.width}px`;
-      span.style.height = `${unit.rect.height}px`;
-      span.style.margin = "0";
-      span.style.transform = "none";
-      span.style.display = unit.source.classList.contains("paren") ? "inline-flex" : "inline-flex";
-      span.style.alignItems = "center";
-      span.style.justifyContent = "center";
-      span.style.border = style.border;
-      span.style.borderRadius = style.borderRadius;
-      span.style.color = style.color;
-      span.style.background = style.background;
-      span.style.font = style.font;
-      span.style.letterSpacing = style.letterSpacing;
-      span.style.lineHeight = style.lineHeight;
-      span.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-      return span;
+    function setTypewriterCoverReveal(items, visibleCount) {
+      items.forEach((covers, index) => {
+        const hidden = index < visibleCount;
+        covers.forEach((cover) => {
+          cover.style.opacity = hidden ? "0" : "1";
+        });
+      });
     }
 
-    let typewriterFrame = 0;
-    function queueTypewriterRebuild() {
-      if (!els.typewriterToggle?.checked) return;
-      cancelAnimationFrame(typewriterFrame);
-      typewriterFrame = requestAnimationFrame(() => refreshTypewriter());
+    function removeTypewriterCovers() {
+      els.poster.querySelectorAll(".typewriter-cover-layer").forEach((layer) => layer.remove());
+      state.typewriterCoverItems = [];
     }
 
-    function closeTypewriterAnimation(collapsePanel = true) {
-      if (!els.typewriterToggle?.checked) return;
-      els.typewriterToggle.checked = false;
-      refreshTypewriter();
-      if (collapsePanel && els.animationPanel) els.animationPanel.open = false;
-    }
-
-    function isAnimationControl(target) {
-      return Boolean(target.closest?.("#animationPanel"));
-    }
-
-    function bindRange(id, outputId, format, cssName, cssValue) {
+    function bindRange(id, outputId, cssName, cssValue) {
       const input = els[id];
       const output = els[outputId];
       const update = () => {
         output.value = input.value;
-        setVar(cssName, cssValue(input.value));
-        if (id === "imageScale") syncLeadingWithImageScale();
-        if (id === "canvasWidth") updateCanvasFit();
-        if (id !== "typewriterSpeed") closeTypewriterAnimation();
+        if (cssName && cssValue) setVar(cssName, cssValue(input.value));
       };
       const updateFromOutput = () => {
         const parsed = Number(output.value);
@@ -1181,10 +1831,7 @@
         const next = Math.min(max, Math.max(min, parsed));
         output.value = next;
         input.value = next;
-        setVar(cssName, cssValue(input.value));
-        if (id === "imageScale") syncLeadingWithImageScale();
-        if (id === "canvasWidth") updateCanvasFit();
-        if (id !== "typewriterSpeed") closeTypewriterAnimation();
+        if (cssName && cssValue) setVar(cssName, cssValue(input.value));
       };
       input.addEventListener("input", update);
       output.addEventListener("change", updateFromOutput);
@@ -1196,22 +1843,139 @@
 
     function bindSelect(id, cssName) {
       const input = els[id];
-      const update = () => {
-        setVar(cssName, input.value);
-        closeTypewriterAnimation();
-      };
+      const update = () => setVar(cssName, input.value);
       input.addEventListener("input", update);
       update();
     }
 
-    function bindColor(id, cssName) {
-      const input = els[id];
-      const update = () => {
-        setVar(cssName, input.value);
-        closeTypewriterAnimation();
+    function updateTypographyCalibration() {
+      const rootStyle = getComputedStyle(document.documentElement);
+      const latinFamily = rootStyle.getPropertyValue("--main-latin").trim() || "Inter, Arial, sans-serif";
+      const cjkFamily = rootStyle.getPropertyValue("--main-cjk").trim() || '"Noto Sans SC", sans-serif';
+      const latinWeight = rootStyle.getPropertyValue("--main-latin-weight").trim() || "700";
+      const cjkWeight = rootStyle.getPropertyValue("--main-cjk-weight").trim() || "700";
+      const size = 120;
+      const latin = measureFontBox(`${latinWeight} ${size}px ${latinFamily}`, "English Hpx");
+      const cjk = measureFontBox(`${cjkWeight} ${size}px ${cjkFamily}`, "汉字排版");
+      if (!latin || !cjk) return;
+
+      const latinHeight = latin.ascent + latin.descent;
+      const cjkHeight = cjk.ascent + cjk.descent;
+      const scale = Math.max(0.82, Math.min(0.98, (latinHeight / cjkHeight) * 0.98));
+      const latinCenter = (-latin.ascent + latin.descent) / 2;
+      const cjkCenter = (-cjk.ascent * scale + cjk.descent * scale) / 2;
+      const shift = Math.max(-0.12, Math.min(0.12, (latinCenter - cjkCenter) / size));
+
+      setVar("--cjk-size-scale", `${scale.toFixed(3)}em`);
+      setVar("--cjk-baseline-shift", `${shift.toFixed(3)}em`);
+    }
+
+    function measureFontBox(font, text) {
+      const canvas = measureFontBox.canvas || (measureFontBox.canvas = document.createElement("canvas"));
+      const ctx = canvas.getContext("2d");
+      ctx.font = font;
+      const metrics = ctx.measureText(text);
+      const ascent = metrics.actualBoundingBoxAscent;
+      const descent = metrics.actualBoundingBoxDescent;
+      if (!Number.isFinite(ascent) || !Number.isFinite(descent) || ascent + descent <= 0) return null;
+      return { ascent, descent };
+    }
+
+    function normalizeHex(value, fallback = "#111111") {
+      const raw = String(value || "").trim();
+      if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+      if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toLowerCase()}`;
+      return fallback;
+    }
+
+    function updateColorMode(button, color) {
+      const light = isWhiteLike(color);
+      button.style.setProperty("--color-front", light ? "#ffffff" : "#050505");
+      button.style.setProperty("--color-back", light ? "#050505" : "#ffffff");
+      button.classList.toggle("is-light", light);
+      button.classList.toggle("is-dark", !light);
+    }
+
+    function isWhiteLike(color) {
+      return color.toLowerCase() === "#ffffff" || color.toLowerCase() === "#fffefa";
+    }
+
+    function updateRandomColorIcon(button, front, back) {
+      button.style.setProperty("--color-front", front);
+      button.style.setProperty("--color-back", back);
+    }
+
+    function bindColorControl({ colorId, hexId, modeId, randomId, cssName, lightRandom = false, onButtonUse = null }) {
+      const colorInput = els[colorId];
+      const hexInput = els[hexId];
+      const modeButton = els[modeId];
+      const randomButton = els[randomId];
+      const randomIconBack = randomColor({ light: lightRandom });
+      const randomIconFront = randomColor({ light: lightRandom });
+      let previousRandomColor = randomIconFront;
+      const apply = (value, { fromRandom = false, previousColor = previousRandomColor } = {}) => {
+        const next = normalizeHex(value, colorInput.defaultValue);
+        colorInput.value = next;
+        hexInput.value = next;
+        setVar(cssName, next);
+        updateColorMode(modeButton, next);
+        if (fromRandom) {
+          updateRandomColorIcon(randomButton, next, previousColor);
+          previousRandomColor = next;
+        }
       };
-      input.addEventListener("input", update);
-      update();
+      colorInput.addEventListener("input", () => apply(colorInput.value));
+      hexInput.addEventListener("change", () => apply(hexInput.value));
+      modeButton.addEventListener("click", () => {
+        if (onButtonUse) onButtonUse();
+        apply(isWhiteLike(colorInput.value) ? "#000000" : "#ffffff");
+      });
+      randomButton.addEventListener("click", () => {
+        if (onButtonUse) onButtonUse();
+        apply(randomColor({ light: lightRandom }), { fromRandom: true, previousColor: previousRandomColor });
+      });
+      updateRandomColorIcon(randomButton, randomIconFront, randomIconBack);
+      apply(colorInput.value);
+    }
+
+    function bindStrokeControl() {
+      const apply = () => {
+        const width = Number(els.mainStrokeWidth.value) || 0;
+        els.mainStrokeWidthValue.value = els.mainStrokeWidth.value;
+        setVar("--main-latin-stroke", `${width}px`);
+        setVar("--main-cjk-stroke", `${width}px`);
+      };
+      els.mainStrokeWidth.addEventListener("input", apply);
+      els.mainStrokeWidthValue.addEventListener("change", () => {
+        els.mainStrokeWidth.value = Math.min(8, Math.max(0, Number(els.mainStrokeWidthValue.value) || 0));
+        apply();
+      });
+      apply();
+    }
+
+    function enableMainStroke() {
+      if ((Number(els.mainStrokeWidth.value) || 0) <= 0) {
+        els.mainStrokeWidth.value = "1";
+        els.mainStrokeWidthValue.value = "1";
+      }
+      setVar("--main-latin-stroke", `${Number(els.mainStrokeWidth.value) || 0}px`);
+      setVar("--main-cjk-stroke", `${Number(els.mainStrokeWidth.value) || 0}px`);
+    }
+
+    function randomColor({ light = false } = {}) {
+      const hue = Math.floor(Math.random() * 360);
+      const saturation = light ? 38 + Math.random() * 34 : 62 + Math.random() * 30;
+      const lightness = light ? 82 + Math.random() * 12 : 16 + Math.random() * 36;
+      return hslToHex(hue, saturation, lightness);
+    }
+
+    function hslToHex(h, s, l) {
+      s /= 100;
+      l /= 100;
+      const k = (n) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return `#${[f(0), f(8), f(4)].map((x) => Math.round(255 * x).toString(16).padStart(2, "0")).join("")}`;
     }
 
     function bindAlignment(groupName, cssName) {
@@ -1221,39 +1985,132 @@
         if (!button) return;
         group.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
         setVar(cssName, button.dataset.align);
-        closeTypewriterAnimation();
       });
     }
 
-    function syncLeadingWithImageScale() {
-      const ratio = Number(els.imageScale.value) / state.baseImageScale;
-      const mainNext = Math.round(state.baseMainLeading * (0.72 + ratio * 0.28));
-      const secondaryNext = Math.round(state.baseSecondaryLeading * (0.72 + ratio * 0.28));
-      setSyncedRange(els.mainLeading, els.mainLeadingValue, mainNext, "--main-leading", (v) => `${Number(v) / 100}`);
-      setSyncedRange(els.secondaryLeading, els.secondaryLeadingValue, secondaryNext, "--secondary-leading", (v) => `${Number(v) / 100}`);
+    function bindExportScale() {
+      const group = document.querySelector("[data-export-scale-group]");
+      group.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-export-scale]");
+        if (!button) return;
+        state.exportScale = Number(button.dataset.exportScale) || 1;
+        group.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
+        updateExportSize();
+      });
+      updateExportSize();
     }
 
-    function setSyncedRange(input, output, value, cssName, cssValue) {
-      const min = Number(input.min);
-      const max = Number(input.max);
-      const next = Math.min(max, Math.max(min, value));
-      input.value = next;
-      output.value = next;
-      setVar(cssName, cssValue(next));
+    function setUiTheme(theme) {
+      document.body.dataset.uiTheme = theme;
+      els.themeToggle.title = theme === "dark" ? "切换到亮色界面" : "切换到暗色界面";
+    }
+
+    function shouldAutoCollapseSidebar() {
+      return window.innerWidth <= 980;
+    }
+
+    function applySidebarState() {
+      const narrow = shouldAutoCollapseSidebar();
+      if (!narrow && !state.sidebarUserCollapsed) state.sidebarOverlayOpen = false;
+      const collapsed = state.sidebarUserCollapsed || narrow;
+      const overlayOpen = collapsed && state.sidebarOverlayOpen;
+      els.app.classList.toggle("sidebar-collapsed", collapsed);
+      els.app.classList.toggle("sidebar-overlay-open", overlayOpen);
+      els.sidebarToggle.setAttribute("aria-expanded", String(!collapsed || overlayOpen));
+      els.sidebarToggle.setAttribute("aria-label", overlayOpen || !collapsed ? "折叠工具栏" : "打开工具栏");
+      els.sidebarFloatingToggle.setAttribute("aria-expanded", String(overlayOpen));
+      els.sidebarFloatingToggle.setAttribute("aria-label", overlayOpen ? "折叠工具栏" : "打开工具栏");
+      window.setTimeout(updateCanvasFit, 190);
+      updateCanvasFit();
+    }
+
+    function toggleSidebarFromPanel() {
+      if (els.app.classList.contains("sidebar-overlay-open")) {
+        state.sidebarOverlayOpen = false;
+      } else {
+        state.sidebarUserCollapsed = true;
+        state.sidebarOverlayOpen = false;
+      }
+      applySidebarState();
+    }
+
+    function releaseButtonFocus(event) {
+      event.currentTarget.blur();
+      window.getSelection?.().removeAllRanges();
+    }
+
+    function toggleSidebarFromFloat() {
+      if (shouldAutoCollapseSidebar()) {
+        state.sidebarOverlayOpen = true;
+      } else {
+        state.sidebarUserCollapsed = false;
+        state.sidebarOverlayOpen = false;
+      }
+      applySidebarState();
+    }
+
+    function getCanvasRatio() {
+      if (els.canvasRatio.value !== "custom") return Number(els.canvasRatio.value) || 1;
+      const width = Number(els.canvasWidthDock.value) || 760;
+      const height = Number(els.canvasHeightDock.value) || Math.round(width / 0.75);
+      return Math.max(0.2, Math.min(4, width / height));
+    }
+
+    function setCanvasExportWidth(value) {
+      const min = Number(els.canvasWidthDock.min);
+      const max = Number(els.canvasWidthDock.max);
+      const next = Math.round(Math.min(max, Math.max(min, Number(value) || min)));
+      els.canvasWidthDock.value = next;
+    }
+
+    function syncCanvasMetrics({ fromHeight = false } = {}) {
+      const ratio = getCanvasRatio();
+      if (fromHeight) {
+        setCanvasExportWidth((Number(els.canvasHeightDock.value) || 1013) * ratio);
+      }
+      const width = Number(els.canvasWidthDock.value) || 760;
+      if (document.activeElement !== els.canvasHeightDock || !fromHeight) {
+        els.canvasHeightDock.value = Math.round(width / ratio);
+      }
+      setVar("--poster-ratio", ratio);
+      updateCanvasFit();
+      updateExportSize();
     }
 
     function updateCanvasFit() {
       const stage = document.querySelector(".stage-wrap");
-      if (!stage || !els.canvasWidth || !els.canvasRatio) return;
-      const stageStyle = getComputedStyle(stage);
-      const horizontalPad = parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
-      const verticalPad = parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom);
-      const desiredWidth = Number(els.canvasWidth.value) || 760;
-      const ratio = Number(els.canvasRatio.value) || 0.75;
-      const availableWidth = Math.max(280, stage.clientWidth - horizontalPad);
-      const availableHeightWidth = Math.max(280, (stage.clientHeight - verticalPad) * ratio);
-      const fittedWidth = Math.max(280, Math.min(desiredWidth, availableWidth, availableHeightWidth));
-      setVar("--canvas-fit-w", `${Math.round(fittedWidth)}px`);
+      const stageRect = stage.getBoundingClientRect();
+      const { width, height } = getCanvasExportSize();
+      const availableWidth = Math.max(100, stageRect.width - 112);
+      const availableHeight = Math.max(100, stageRect.height - 168);
+      const fitScale = Math.min(availableWidth / width, availableHeight / height);
+      const previewScale = Math.max(0.1, Math.min(1, Number(els.canvasWidth.value) / 100 || 1));
+      const fitWidth = Math.max(40, width * fitScale * previewScale);
+      setVar("--canvas-fit-w", `${Math.round(fitWidth)}px`);
+      centerStageView();
+    }
+
+    function getCanvasExportSize() {
+      const width = Math.max(100, Math.round(Number(els.canvasWidthDock.value) || 760));
+      const height = Math.max(100, Math.round(Number(els.canvasHeightDock.value) || Math.round(width / getCanvasRatio())));
+      return { width, height };
+    }
+
+    function updateExportSize() {
+      if (!els.exportSize) return;
+      const { width, height } = getCanvasExportSize();
+      const scale = state.exportScale || 1;
+      els.exportSize.textContent = `输出：${width * scale} × ${height * scale} px`;
+    }
+
+    function centerStageView() {
+      const stage = document.querySelector(".stage-wrap");
+      requestAnimationFrame(() => {
+        const maxLeft = stage.scrollWidth - stage.clientWidth;
+        const maxTop = stage.scrollHeight - stage.clientHeight;
+        stage.scrollLeft = maxLeft > 0 ? maxLeft / 2 : 0;
+        stage.scrollTop = maxTop > 0 ? maxTop / 2 : 0;
+      });
     }
 
     function applyDefaults() {
@@ -1265,79 +2122,131 @@
       renderFooter();
     }
 
-    bindRange("canvasWidth", "canvasWidthValue", (v) => `${v}px`, "--canvas-w", (v) => `${v}px`);
-    bindRange("mainSize", "mainSizeValue", (v) => `${v}px`, "--main-size", (v) => `${v}px`);
-    bindRange("mainTracking", "mainTrackingValue", (v) => `${v}%`, "--main-tracking", (v) => `${Number(v) / 100}em`);
-    bindRange("mainLeading", "mainLeadingValue", (v) => `${v}%`, "--main-leading", (v) => `${Number(v) / 100}`);
-    bindRange("imageScale", "imageScaleValue", (v) => `${v}%`, "--image-scale", (v) => `${Number(v) / 100}`);
-    bindRange("imageShift", "imageShiftValue", (v) => `${v}%`, "--image-shift", (v) => `${Number(v) / 100}em`);
-    bindRange("secondarySize", "secondarySizeValue", (v) => `${v}px`, "--secondary-size", (v) => `${v}px`);
-    bindRange("secondaryTracking", "secondaryTrackingValue", (v) => `${v}%`, "--secondary-tracking", (v) => `${Number(v) / 100}em`);
-    bindRange("secondaryLeading", "secondaryLeadingValue", (v) => `${v}%`, "--secondary-leading", (v) => `${Number(v) / 100}`);
-    bindRange("typewriterSpeed", "typewriterSpeedValue", (v) => `${v}/s`, "--type-speed", (v) => `${v}`);
+    function resetDefaults() {
+      state.resetting = true;
+      document.querySelectorAll("input, select, textarea").forEach((control) => {
+        if (control.type === "file") return;
+        if (control.type === "checkbox") {
+          control.checked = control.defaultChecked;
+        } else if (control.tagName === "SELECT") {
+          const selected = Array.from(control.options).findIndex((option) => option.defaultSelected);
+          control.selectedIndex = selected >= 0 ? selected : 0;
+        } else {
+          control.value = control.defaultValue;
+        }
+        control.dispatchEvent(new Event("input"));
+        control.dispatchEvent(new Event("change"));
+      });
+      state.resetting = false;
+      state.randomLetter = false;
+      state.exportScale = 1;
+      state.seed = Date.now();
+      els.randomLetters.textContent = "随机字母大小";
+      els.randomLetters.classList.remove("is-active");
+      els.mainStrokeWidth.value = els.mainStrokeWidth.defaultValue;
+      els.mainStrokeWidthValue.value = els.mainStrokeWidthValue.defaultValue;
+      els.mainStrokeColor.value = els.mainStrokeColor.defaultValue;
+      els.mainStrokeColorHex.value = els.mainStrokeColorHex.defaultValue;
+      setVar("--main-latin-stroke", "0px");
+      setVar("--main-cjk-stroke", "0px");
+      setVar("--main-stroke-color", els.mainStrokeColor.defaultValue);
+      document.querySelectorAll("[data-export-scale]").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.exportScale === "1");
+      });
+      setUiTheme("light");
+      applyDefaults();
+      syncCanvasMetrics();
+    }
+
+    bindRange("canvasWidth", "canvasWidthValue");
+    bindRange("mainSize", "mainSizeValue", "--main-size", (v) => `${v}px`);
+    bindRange("mainTracking", "mainTrackingValue", "--main-tracking", (v) => `${Number(v) / 100}em`);
+    bindRange("mainLeading", "mainLeadingValue", "--main-leading", (v) => `${Number(v) / 100}`);
+    bindRange("imageScale", "imageScaleValue", "--image-scale", (v) => `${Number(v) / 100}`);
+    bindRange("imageShift", "imageShiftValue", "--image-shift", (v) => `${Number(v) / 100}em`);
+    bindRange("secondarySize", "secondarySizeValue", "--secondary-size", (v) => `${v}px`);
+    bindRange("secondaryTracking", "secondaryTrackingValue", "--secondary-tracking", (v) => `${Number(v) / 100}em`);
+    bindRange("secondaryLeading", "secondaryLeadingValue", "--secondary-leading", (v) => `${Number(v) / 100}`);
+    bindRange("typewriterDuration", "typewriterDurationValue");
 
     bindSelect("mainLatinWeight", "--main-latin-weight");
     bindSelect("mainCjkWeight", "--main-cjk-weight");
     bindSelect("mainLatin", "--main-latin");
     bindSelect("mainCjk", "--main-cjk");
-    bindSelect("secondaryLatinWeight", "--secondary-latin-weight");
-    bindSelect("secondaryCjkWeight", "--secondary-cjk-weight");
-    bindSelect("secondaryLatin", "--secondary-latin");
-    bindSelect("secondaryCjk", "--secondary-cjk");
-    bindColor("posterBg", "--poster-bg");
-    bindColor("mainColor", "--main-color");
-    bindColor("secondaryColor", "--secondary-color");
+    [els.mainLatinWeight, els.mainCjkWeight, els.mainLatin, els.mainCjk].forEach((control) => {
+      control.addEventListener("input", updateTypographyCalibration);
+      control.addEventListener("change", updateTypographyCalibration);
+    });
+    updateTypographyCalibration();
+    if (document.fonts?.ready) document.fonts.ready.then(updateTypographyCalibration);
+    bindColorControl({ colorId: "posterBg", hexId: "posterBgHex", modeId: "posterBgMode", randomId: "randomPosterBg", cssName: "--poster-bg", lightRandom: true });
+    bindColorControl({ colorId: "mainColor", hexId: "mainColorHex", modeId: "mainColorMode", randomId: "randomMainColor", cssName: "--main-color" });
+    bindColorControl({ colorId: "mainStrokeColor", hexId: "mainStrokeColorHex", modeId: "mainStrokeColorMode", randomId: "randomMainStrokeColor", cssName: "--main-stroke-color", onButtonUse: enableMainStroke });
+    bindColorControl({ colorId: "secondaryColor", hexId: "secondaryColorHex", modeId: "secondaryColorMode", randomId: "randomSecondaryColor", cssName: "--secondary-color" });
+    bindStrokeControl();
     bindAlignment("main", "--main-align");
     bindAlignment("secondary", "--secondary-align");
+    bindExportScale();
 
-    const sidebar = document.querySelector(".sidebar");
-    ["input", "change"].forEach((eventName) => {
-      sidebar.addEventListener(eventName, (event) => {
-        if (!isAnimationControl(event.target)) closeTypewriterAnimation();
-      }, true);
+    els.themeToggle.addEventListener("click", () => {
+      setUiTheme(document.body.dataset.uiTheme === "dark" ? "light" : "dark");
     });
+    els.sidebarToggle.addEventListener("click", (event) => {
+      releaseButtonFocus(event);
+      toggleSidebarFromPanel();
+    });
+    els.sidebarFloatingToggle.addEventListener("click", (event) => {
+      releaseButtonFocus(event);
+      toggleSidebarFromFloat();
+    });
+    els.sidebarBackdrop.addEventListener("click", () => {
+      state.sidebarOverlayOpen = false;
+      applySidebarState();
+    });
+    els.resetDefaults.addEventListener("click", resetDefaults);
+    setUiTheme("light");
 
-    els.canvasRatio.addEventListener("input", () => {
-      setVar("--poster-ratio", els.canvasRatio.value);
-      updateCanvasFit();
+    els.canvasWidth.addEventListener("input", updateCanvasFit);
+    els.canvasWidthValue.addEventListener("change", updateCanvasFit);
+    els.canvasWidthDock.addEventListener("change", () => {
+      setCanvasExportWidth(els.canvasWidthDock.value);
+      syncCanvasMetrics();
     });
+    els.canvasHeightDock.addEventListener("change", () => {
+      if (state.resetting) return;
+      els.canvasRatio.value = "custom";
+      syncCanvasMetrics({ fromHeight: true });
+    });
+    els.canvasRatio.addEventListener("input", () => syncCanvasMetrics());
     els.canvasRatio.dispatchEvent(new Event("input"));
     els.mainText.addEventListener("input", renderMain);
     [els.footerOne, els.footerTwo, els.footerThree].forEach((textarea) => textarea.addEventListener("input", renderFooter));
 
-    document.querySelectorAll(".zoom-dock button").forEach((button) => {
-      button.addEventListener("click", () => {
-        setVar("--preview-scale", button.dataset.scale);
-        document.querySelectorAll(".zoom-dock button").forEach((item) => item.classList.toggle("is-active", item === button));
-        updateCanvasFit();
-      });
-    });
+    window.addEventListener("resize", applySidebarState);
 
     els.randomLetters.addEventListener("click", () => {
-      closeTypewriterAnimation();
       state.randomLetter = !state.randomLetter;
       state.seed = Date.now();
-      els.randomLetters.textContent = state.randomLetter ? "重新随机字母" : "开启随机大小";
+      els.randomLetters.textContent = state.randomLetter ? "重新随机字母" : "随机字母大小";
       els.randomLetters.classList.toggle("is-active", state.randomLetter);
       renderMain();
     });
 
     els.typewriterToggle.addEventListener("change", () => {
-      refreshTypewriter();
+      refreshTypewriter({ restart: els.typewriterToggle.checked });
     });
 
-    els.typewriterSpeed.addEventListener("input", () => {
-      refreshTypewriter();
+    els.typewriterDuration.addEventListener("input", () => {
+      refreshTypewriter({ restart: Boolean(els.typewriterToggle.checked) });
     });
 
-    els.typewriterSpeedValue.addEventListener("change", () => {
-      refreshTypewriter();
+    els.typewriterDurationValue.addEventListener("change", () => {
+      refreshTypewriter({ restart: Boolean(els.typewriterToggle.checked) });
     });
 
     els.randomRemoveBg.addEventListener("change", renderMain);
 
     els.pickFolder.addEventListener("click", async () => {
-      closeTypewriterAnimation();
       if ("showDirectoryPicker" in window) {
         try {
           const dir = await window.showDirectoryPicker();
@@ -1358,16 +2267,42 @@
     });
 
     els.shuffleImages.addEventListener("click", () => {
-      closeTypewriterAnimation();
       rebuildImageOrder();
       renderMain();
     });
 
     async function loadImages(files, folderName) {
+      const token = state.loadToken + 1;
+      state.loadToken = token;
       revokeImageUrls();
       const imageFiles = files.filter((file) => /^image\//.test(file.type) || /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(file.name));
-      els.folderStatus.textContent = imageFiles.length ? `正在载入 ${folderName} 中的 ${imageFiles.length} 张图片并分析背景。` : "这个文件夹里没有识别到图片。";
-      state.imageItems = await Promise.all(imageFiles.map(async (file) => {
+      if (!imageFiles.length) {
+        els.folderStatus.textContent = "这个文件夹里没有识别到图片。";
+        renderMain();
+        return;
+      }
+
+      const neededCount = Math.min(imageFiles.length, Math.max(1, countImageMarkers(), 6));
+      const orderedFiles = shuffle(imageFiles);
+      const firstBatch = orderedFiles.slice(0, neededCount);
+      const remaining = orderedFiles.slice(neededCount);
+      els.folderStatus.textContent = `正在优先载入画面需要的 ${firstBatch.length} 张图片，共 ${imageFiles.length} 张。`;
+
+      const firstItems = (await Promise.all(firstBatch.map(loadImageFileItem))).filter(Boolean);
+      if (state.loadToken !== token) return;
+      state.imageItems = firstItems;
+      rebuildImageOrder();
+      renderMain();
+      updateFolderStatus(folderName, imageFiles.length, remaining.length);
+      if (remaining.length) loadRemainingImages(remaining, folderName, imageFiles.length, token);
+    }
+
+    function countImageMarkers() {
+      return (els.mainText.value.match(/\{\s*\}|｛\s*｝|\(\s*\)|（\s*）|【\s*】|\[\s*\]/g) || []).length;
+    }
+
+    async function loadImageFileItem(file) {
+      try {
         const src = await fileToLayoutDataUrl(file);
         const cutoutData = await makeCutoutCandidate(src).catch(() => null);
         return {
@@ -1376,13 +2311,37 @@
           cutout: cutoutData?.url || "",
           clearSubject: Boolean(cutoutData?.clearSubject)
         };
-      }));
-      rebuildImageOrder();
+      } catch (error) {
+        return null;
+      }
+    }
+
+    async function loadRemainingImages(files, folderName, totalCount, token) {
+      const batchSize = 4;
+      for (let index = 0; index < files.length; index += batchSize) {
+        if (state.loadToken !== token) return;
+        const before = state.imageOrder.length;
+        const batch = files.slice(index, index + batchSize);
+        const items = (await Promise.all(batch.map(loadImageFileItem))).filter(Boolean);
+        if (state.loadToken !== token) return;
+        if (items.length) {
+          state.imageItems.push(...items);
+          state.imageOrder.push(...shuffle(items));
+          if (countImageMarkers() > before) renderMain();
+        }
+        updateFolderStatus(folderName, totalCount, files.length - index - batch.length);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      updateFolderStatus(folderName, totalCount, 0);
+    }
+
+    function updateFolderStatus(folderName, totalCount, remainingCount = 0) {
+      const loadedCount = state.imageItems.length;
       const cutoutCount = state.imageItems.filter((item) => item.clearSubject).length;
-      els.folderStatus.textContent = state.imageItems.length
-        ? `已载入 ${folderName} 中的 ${state.imageItems.length} 张图片，${cutoutCount} 张适合随机去背景。`
-        : "这个文件夹里没有识别到图片。";
-      renderMain();
+      const loadingText = remainingCount > 0 ? `，后台继续载入 ${remainingCount} 张` : "";
+      els.folderStatus.textContent = loadedCount
+        ? `已载入 ${folderName} 中的 ${loadedCount}/${totalCount} 张图片，${cutoutCount} 张适合随机去背景${loadingText}。`
+        : "正在读取图片，请稍候。";
     }
 
     function revokeImageUrls() {
@@ -1483,15 +2442,8 @@
     function loadImage(src) {
       return new Promise((resolve, reject) => {
         const img = new Image();
-        const timer = setTimeout(() => reject(new Error("image load timeout")), 10000);
-        img.onload = () => {
-          clearTimeout(timer);
-          resolve(img);
-        };
-        img.onerror = (error) => {
-          clearTimeout(timer);
-          reject(error);
-        };
+        img.onload = () => resolve(img);
+        img.onerror = reject;
         img.src = src;
       });
     }
@@ -1510,97 +2462,39 @@
     }
 
     async function renderPosterCanvas() {
-      return renderPosterCanvasManual();
-    }
-
-    async function renderPosterCanvasDom() {
-      await waitForPosterReady();
-      const { node, width, height, styleText } = clonePosterForExport();
-      const exportScale = 3;
-      const serialized = serializePosterNode(node, width, height, styleText);
-      const svg = [
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${width * exportScale}" height="${height * exportScale}" viewBox="0 0 ${width * exportScale} ${height * exportScale}">`,
-        `<foreignObject width="${width}" height="${height}" transform="scale(${exportScale})">`,
-        serialized,
-        "</foreignObject>",
-        "</svg>"
-      ].join("");
-      const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
-      const image = await loadImage(url);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(width * exportScale);
-      canvas.height = Math.round(height * exportScale);
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(image, 0, 0);
-      URL.revokeObjectURL(url);
-      return { canvas, width, height };
+      return await renderPosterCanvasManual();
     }
 
     async function renderPosterCanvasManual() {
-      await waitForPosterReady();
-      const width = els.poster.offsetWidth;
-      const height = els.poster.offsetHeight;
-      const exportScale = 3;
+      await waitForPosterAssets();
+
+      const { width, height } = getCanvasExportSize();
+      const exportScale = state.exportScale || 1;
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(width * exportScale);
       canvas.height = Math.round(height * exportScale);
       const ctx = canvas.getContext("2d");
       ctx.scale(exportScale, exportScale);
       const posterRect = els.poster.getBoundingClientRect();
-      const correction = width / posterRect.width;
+      const correction = width / Math.max(1, posterRect.width);
       ctx.fillStyle = getComputedStyle(els.poster).backgroundColor;
       ctx.fillRect(0, 0, width, height);
       await drawPosterNode(ctx, els.poster, posterRect, correction);
-      return { canvas, width, height };
+      drawSecondaryCopy(ctx, posterRect, correction);
+      drawTypewriterCovers(ctx, posterRect, correction);
+      return { canvas, width: canvas.width, height: canvas.height };
     }
 
-    async function waitForPosterReady() {
-      if (document.fonts?.ready) await document.fonts.ready;
-      await Promise.all(Array.from(els.poster.querySelectorAll("img")).map((img) => {
-        if (img.complete) return true;
+    async function waitForPosterAssets() {
+      if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+      const images = Array.from(els.poster.querySelectorAll("img"));
+      await Promise.all(images.map((img) => {
+        if (img.complete) return img.decode ? img.decode().catch(() => {}) : true;
         return new Promise((resolve) => {
-          const done = () => resolve(true);
-          img.onload = done;
-          img.onerror = done;
-          setTimeout(done, 3000);
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
         });
       }));
-    }
-
-    function clonePosterForExport() {
-      const width = els.poster.offsetWidth;
-      const height = els.poster.offsetHeight;
-      const clone = els.poster.cloneNode(true);
-      clone.classList.remove("typewriter-on");
-      clone.querySelector("#typewriterLayer")?.remove();
-      clone.removeAttribute("id");
-      clone.style.width = `${width}px`;
-      clone.style.height = `${height}px`;
-      clone.style.maxWidth = "none";
-      clone.style.minWidth = "0";
-      clone.style.boxShadow = "none";
-      clone.style.transform = "none";
-      clone.style.margin = "0";
-      const styleText = Array.from(document.querySelectorAll("style")).map((style) => style.textContent || "").join("\n");
-      return { node: clone, width, height, styleText };
-    }
-
-    function serializePosterNode(posterNode, width, height, styleText) {
-      const wrapper = document.createElement("div");
-      wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-      wrapper.style.width = `${width}px`;
-      wrapper.style.height = `${height}px`;
-      wrapper.style.margin = "0";
-      wrapper.style.padding = "0";
-      const computedRoot = getComputedStyle(document.documentElement);
-      for (const name of ["--poster-bg", "--main-color", "--secondary-color", "--poster-pad", "--main-size", "--main-latin-weight", "--main-cjk-weight", "--main-latin-stroke", "--main-cjk-stroke", "--main-tracking", "--main-leading", "--main-align", "--secondary-size", "--secondary-latin-weight", "--secondary-cjk-weight", "--secondary-latin-stroke", "--secondary-cjk-stroke", "--secondary-tracking", "--secondary-leading", "--secondary-align", "--image-scale", "--image-shift", "--main-latin", "--main-cjk", "--secondary-latin", "--secondary-cjk"]) {
-        wrapper.style.setProperty(name, computedRoot.getPropertyValue(name));
-      }
-      const style = document.createElement("style");
-      style.textContent = `${styleText}\n.poster{box-shadow:none!important;}`;
-      wrapper.appendChild(style);
-      wrapper.appendChild(posterNode);
-      return new XMLSerializer().serializeToString(wrapper);
     }
 
     async function drawPosterNode(ctx, root, posterRect, correction) {
@@ -1621,11 +2515,10 @@
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
           if (node.nodeType === Node.TEXT_NODE) {
-            if (node.parentElement?.closest(".typewriter-layer")) return NodeFilter.FILTER_REJECT;
-            if (node.parentElement?.closest(".empty-image")) return NodeFilter.FILTER_REJECT;
+            if (node.parentElement?.closest(".secondary-copy")) return NodeFilter.FILTER_REJECT;
             return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
           }
-          if (node.classList?.contains("typewriter-layer")) return NodeFilter.FILTER_REJECT;
+          if (node.closest?.(".secondary-copy")) return NodeFilter.FILTER_REJECT;
           if (node.tagName === "IMG" || node.classList?.contains("empty-image")) {
             return NodeFilter.FILTER_ACCEPT;
           }
@@ -1641,72 +2534,160 @@
       const style = getComputedStyle(parent);
       const text = textNode.textContent || "";
       if (!text) return;
+      const opacity = getEffectiveOpacity(parent);
+      if (opacity <= 0.01) return;
+      ctx.save();
+      ctx.globalAlpha = opacity;
       ctx.fillStyle = style.color;
-      ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const scaledFontSize = fontSize * correction;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${scaledFontSize}px ${style.fontFamily}`;
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
-      const fontSize = parseFloat(style.fontSize) || 16;
-      const strokeWidth = parseFloat(style.webkitTextStrokeWidth || style.textStrokeWidth || "0") || 0;
-      if (strokeWidth > 0) {
-        ctx.lineWidth = strokeWidth * 2;
-        ctx.strokeStyle = style.webkitTextStrokeColor === "currentcolor" ? style.color : style.webkitTextStrokeColor;
-      }
+      const strokeWidth = parseFloat(style.getPropertyValue("-webkit-text-stroke-width")) || 0;
       const range = document.createRange();
-      const segments = segmentText(text);
-      for (const segment of segments) {
-        const char = segment.text;
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
         if (!char.trim()) continue;
-        range.setStart(textNode, segment.start);
-        range.setEnd(textNode, segment.end);
+        const metrics = ctx.measureText(char);
+        const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : scaledFontSize * 0.72;
+        const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : scaledFontSize * 0.22;
+        range.setStart(textNode, i);
+        range.setEnd(textNode, i + 1);
         const rects = Array.from(range.getClientRects());
         rects.forEach((rect) => {
           if (!rect.width && !rect.height) return;
           const x = (rect.left - posterRect.left) * correction;
-          const y = ((rect.top - posterRect.top) * correction) + canvasBaselineForChar(ctx, char, rect.height * correction, fontSize);
-          if (strokeWidth > 0) ctx.strokeText(char, x, y);
+          const y = (rect.top - posterRect.top) * correction + (rect.height * correction + ascent - descent) / 2;
+          if (strokeWidth > 0) {
+            ctx.lineWidth = strokeWidth * correction;
+            ctx.strokeStyle = style.webkitTextStrokeColor || style.color;
+            ctx.lineJoin = "round";
+            ctx.strokeText(char, x, y);
+          }
           ctx.fillText(char, x, y);
         });
       }
       range.detach();
+      ctx.restore();
     }
 
-    function segmentText(text) {
-      if (typeof Intl !== "undefined" && Intl.Segmenter) {
-        const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-        return Array.from(segmenter.segment(text), (item) => ({
-          text: item.segment,
-          start: item.index,
-          end: item.index + item.segment.length
-        }));
-      }
-      const segments = [];
-      let index = 0;
-      for (const char of text) {
-        segments.push({ text: char, start: index, end: index + char.length });
-        index += char.length;
-      }
-      return segments;
+    function drawSecondaryCopy(ctx, posterRect, correction) {
+      const footer = document.querySelector(".secondary-copy");
+      const style = getComputedStyle(footer);
+      const columns = [
+        { node: els.footerOneOut, source: els.footerOne.value },
+        { node: els.footerTwoOut, source: els.footerTwo.value },
+        { node: els.footerThreeOut, source: els.footerThree.value }
+      ];
+      ctx.save();
+      ctx.fillStyle = style.color;
+      ctx.textBaseline = "alphabetic";
+      columns.forEach(({ node, source }) => {
+        const rect = node.getBoundingClientRect();
+        const nodeStyle = getComputedStyle(node);
+        const x = (rect.left - posterRect.left) * correction;
+        const y = (rect.top - posterRect.top) * correction;
+        const width = rect.width * correction;
+        drawSecondaryBlock(ctx, source, x, y, width, style, nodeStyle, correction);
+      });
+      ctx.restore();
     }
 
-    function canvasBaselineForChar(ctx, char, rectHeight, fallbackFontSize) {
-      const metrics = ctx.measureText(char);
-      if (Number.isFinite(metrics.actualBoundingBoxAscent) && Number.isFinite(metrics.actualBoundingBoxDescent)) {
-        return (rectHeight + metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
+    function drawSecondaryBlock(ctx, text, x, y, width, style, nodeStyle, correction) {
+      const fontSize = (parseFloat(style.fontSize) || 12) * correction;
+      const lineHeight = fontSize * (parseFloat(style.lineHeight) / (parseFloat(style.fontSize) || 12) || 1.12);
+      const letterSpacing = (parseFloat(style.letterSpacing) || 0) * correction;
+      const align = style.textAlign || "left";
+      let cursorY = y + getCanvasBaseline(ctx, fontSize, style.fontWeight, style.fontFamily);
+      String(text || "").split(/\n/).forEach((paragraph, paragraphIndex) => {
+        const lines = wrapSecondaryLine(ctx, paragraph, width, fontSize, style, letterSpacing);
+        lines.forEach((line) => {
+          const lineWidth = measureRuns(ctx, line, fontSize, style, letterSpacing);
+          const offset = align === "center" ? (width - lineWidth) / 2 : align === "right" || nodeStyle.justifySelf === "end" ? width - lineWidth : 0;
+          drawRuns(ctx, line, x + Math.max(0, offset), cursorY, fontSize, style, letterSpacing);
+          cursorY += lineHeight;
+        });
+        if (paragraphIndex < String(text || "").split(/\n/).length - 1) cursorY += lineHeight * 0.08;
+      });
+    }
+
+    function wrapSecondaryLine(ctx, text, maxWidth, fontSize, style, letterSpacing) {
+      const tokens = tokenizeCanvasText(text);
+      const lines = [];
+      let line = [];
+      tokens.forEach((token) => {
+        const trial = line.concat(token);
+        if (line.length && measureRuns(ctx, trial, fontSize, style, letterSpacing) > maxWidth) {
+          lines.push(trimCanvasTokens(line));
+          line = /^\s+$/.test(token.value) ? [] : [token];
+        } else {
+          line = trial;
+        }
+      });
+      if (line.length) lines.push(trimCanvasTokens(line));
+      return lines.filter((lineItems) => lineItems.length);
+    }
+
+    function tokenizeCanvasText(text) {
+      const tokens = [];
+      const pattern = /[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|\s+|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|./gu;
+      let match;
+      while ((match = pattern.exec(text || ""))) {
+        const value = match[0];
+        tokens.push({ value, cjk: /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(value) });
       }
-      return fallbackFontSize * 0.82;
+      return tokens;
+    }
+
+    function trimCanvasTokens(tokens) {
+      let start = 0;
+      let end = tokens.length;
+      while (start < end && /^\s+$/.test(tokens[start].value)) start += 1;
+      while (end > start && /^\s+$/.test(tokens[end - 1].value)) end -= 1;
+      return tokens.slice(start, end);
+    }
+
+    function measureRuns(ctx, tokens, fontSize, style, letterSpacing) {
+      return tokens.reduce((width, token, index) => {
+        setCanvasTextFont(ctx, token.cjk, fontSize, style);
+        return width + ctx.measureText(token.value).width + (index ? letterSpacing : 0);
+      }, 0);
+    }
+
+    function drawRuns(ctx, tokens, x, y, fontSize, style, letterSpacing) {
+      let cursorX = x;
+      tokens.forEach((token, index) => {
+        if (index) cursorX += letterSpacing;
+        setCanvasTextFont(ctx, token.cjk, fontSize, style);
+        ctx.fillText(token.value, cursorX, y);
+        cursorX += ctx.measureText(token.value).width;
+      });
+    }
+
+    function setCanvasTextFont(ctx, cjk, fontSize, style) {
+      const family = cjk
+        ? getComputedStyle(document.documentElement).getPropertyValue("--main-cjk").trim() || style.fontFamily
+        : style.fontFamily;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${family}`;
+    }
+
+    function getCanvasBaseline(ctx, fontSize, weight, family) {
+      ctx.font = `${weight} ${fontSize}px ${family}`;
+      const metrics = ctx.measureText("Hg");
+      const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fontSize * 0.75;
+      const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.2;
+      return (fontSize + ascent - descent) / 2;
     }
 
     async function drawContainImage(ctx, img, posterRect, correction) {
       if (!img.complete) await new Promise((resolve) => {
-        const done = () => resolve(true);
-        img.onload = done;
-        img.onerror = done;
-        setTimeout(done, 3000);
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
       });
-      if (!img.naturalWidth || !img.naturalHeight) {
-        drawEmptyImage(ctx, img.parentElement, posterRect, correction);
-        return;
-      }
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const opacity = getEffectiveOpacity(img);
+      if (opacity <= 0.01) return;
       const rect = img.getBoundingClientRect();
       const boxWidth = rect.width * correction;
       const boxHeight = rect.height * correction;
@@ -1721,10 +2702,15 @@
       }
       const x = (rect.left - posterRect.left) * correction + (boxWidth - drawWidth) / 2;
       const y = (rect.top - posterRect.top) * correction + (boxHeight - drawHeight) / 2;
+      ctx.save();
+      ctx.globalAlpha = opacity;
       ctx.drawImage(img, x, y, drawWidth, drawHeight);
+      ctx.restore();
     }
 
     function drawEmptyImage(ctx, node, posterRect, correction) {
+      const opacity = getEffectiveOpacity(node);
+      if (opacity <= 0.01) return;
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       const x = (rect.left - posterRect.left) * correction;
@@ -1732,28 +2718,65 @@
       const width = rect.width * correction;
       const height = rect.height * correction;
       ctx.save();
+      ctx.globalAlpha = opacity;
       ctx.strokeStyle = style.borderTopColor;
       ctx.lineWidth = parseFloat(style.borderTopWidth) || 2;
       ctx.setLineDash([6, 5]);
       ctx.strokeRect(x, y, width, height);
       ctx.fillStyle = style.color;
-      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const fontSize = (parseFloat(style.fontSize) || 12) * correction;
+      ctx.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(node.textContent.trim(), x + width / 2, y + height / 2);
       ctx.restore();
     }
 
+    function getEffectiveOpacity(node) {
+      let opacity = 1;
+      let current = node;
+      while (current && current !== els.poster.parentElement) {
+        if (current.nodeType === Node.ELEMENT_NODE) {
+          const value = Number(getComputedStyle(current).opacity);
+          if (Number.isFinite(value)) opacity *= value;
+        }
+        if (current === els.poster) break;
+        current = current.parentElement;
+      }
+      return opacity;
+    }
+
+    function drawTypewriterCovers(ctx, posterRect, correction) {
+      const covers = Array.from(els.poster.querySelectorAll(".typewriter-cover"));
+      covers.forEach((cover) => {
+        const opacity = getEffectiveOpacity(cover);
+        if (opacity <= 0.01) return;
+        const rect = cover.getBoundingClientRect();
+        const style = getComputedStyle(cover);
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = style.backgroundColor;
+        ctx.fillRect(
+          (rect.left - posterRect.left) * correction,
+          (rect.top - posterRect.top) * correction,
+          rect.width * correction,
+          rect.height * correction
+        );
+        ctx.restore();
+      });
+    }
+
     async function exportPosterPng() {
       els.exportStatus.textContent = "正在生成 PNG。";
       try {
         const { canvas } = await renderPosterCanvas();
-        const blob = await canvasToBlob(canvas, "image/png");
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
         if (!blob) throw new Error("empty canvas");
         downloadBlob(blob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.png`);
         els.exportStatus.textContent = "PNG 已生成。";
       } catch (error) {
-        els.exportStatus.textContent = `PNG 导出失败：${exportErrorMessage(error)}`;
+        console.error(error);
+        els.exportStatus.textContent = `PNG 导出失败：${getErrorMessage(error)}`;
       }
     }
 
@@ -1761,27 +2784,128 @@
       els.exportStatus.textContent = "正在生成 PDF。";
       try {
         const rendered = await renderPosterCanvas();
-        const pdfBlob = await makePdfFromCanvas(rendered.canvas, rendered.width, rendered.height);
+        const jpegBlob = await new Promise((resolve) => rendered.canvas.toBlob(resolve, "image/jpeg", 0.96));
+        if (!jpegBlob) throw new Error("empty jpeg");
+        const pdfBlob = await makePdfFromJpeg(jpegBlob, rendered.canvas.width, rendered.canvas.height, rendered.width, rendered.height);
         downloadBlob(pdfBlob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.pdf`);
         els.exportStatus.textContent = "PDF 已生成。";
       } catch (error) {
-        els.exportStatus.textContent = `PDF 导出失败：${exportErrorMessage(error)}`;
+        console.error(error);
+        els.exportStatus.textContent = `PDF 导出失败：${getErrorMessage(error)}`;
       }
     }
 
-    function canvasToBlob(canvas, type, quality) {
-      return new Promise((resolve, reject) => {
-        try {
-          canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("empty canvas blob")), type, quality);
-        } catch (error) {
-          reject(error);
+    async function exportPosterMp4() {
+      if (!HTMLCanvasElement.prototype.captureStream || !window.MediaRecorder) {
+        els.exportStatus.textContent = "视频导出失败：当前浏览器不支持画布录制。";
+        return;
+      }
+      const mimeType = getSupportedVideoMime();
+      if (!mimeType) {
+        els.exportStatus.textContent = "视频导出失败：当前浏览器没有可用的视频编码器。";
+        return;
+      }
+
+      const isMp4 = mimeType.includes("mp4");
+      const fps = 24;
+      const seconds = Math.max(0.5, Number(els.typewriterDuration?.value || 3));
+      const frameCount = Math.max(2, Math.ceil(seconds * fps));
+      const wasChecked = els.typewriterToggle.checked;
+      let stream;
+
+      els.exportStatus.textContent = isMp4 ? "正在录制 MP4 动画。" : "当前浏览器不支持 MP4 编码，正在录制 WebM 动画。";
+      try {
+        clearTypewriterTimer();
+        removeTypewriterCovers();
+        els.typewriterToggle.checked = true;
+        const coverItems = buildTypewriterCovers();
+        const unitCount = coverItems.length;
+
+        const firstFrame = await renderPosterCanvas();
+        const videoCanvas = document.createElement("canvas");
+        videoCanvas.width = firstFrame.canvas.width;
+        videoCanvas.height = firstFrame.canvas.height;
+        const videoCtx = videoCanvas.getContext("2d");
+        stream = videoCanvas.captureStream(fps);
+        const chunks = [];
+        const recorder = new MediaRecorder(stream, { mimeType });
+        const stopped = new Promise((resolve) => {
+          recorder.addEventListener("stop", resolve, { once: true });
+        });
+        recorder.addEventListener("dataavailable", (event) => {
+          if (event.data?.size) chunks.push(event.data);
+        });
+
+        recorder.start();
+        videoCtx.drawImage(firstFrame.canvas, 0, 0);
+        stream.getVideoTracks()[0]?.requestFrame?.();
+        for (let frame = 0; frame <= frameCount; frame += 1) {
+          const visibleCount = Math.ceil((frame / frameCount) * unitCount);
+          setTypewriterCoverReveal(coverItems, visibleCount);
+          const rendered = await renderPosterCanvas();
+          videoCtx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+          videoCtx.drawImage(rendered.canvas, 0, 0);
+          stream.getVideoTracks()[0]?.requestFrame?.();
+          if (frame % Math.max(1, Math.round(fps / 3)) === 0) {
+            els.exportStatus.textContent = `${isMp4 ? "MP4" : "WebM"} 录制中：${Math.round((frame / frameCount) * 100)}%。`;
+          }
+          await wait(1000 / fps);
         }
-      });
+
+        setTypewriterCoverReveal(coverItems, unitCount);
+        await wait(180);
+        if (recorder.state === "recording" && recorder.requestData) recorder.requestData();
+        recorder.stop();
+        await stopped;
+        stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+        removeTypewriterCovers();
+        if (wasChecked) {
+          completeTypewriter();
+          els.typewriterToggle.checked = true;
+        } else {
+          els.typewriterToggle.checked = false;
+          disableTypewriter();
+        }
+
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size < 1024) throw new Error("empty video");
+        const ext = isMp4 ? "mp4" : "webm";
+        downloadBlob(blob, `图文自动排版工具-打字机动画-${new Date().toISOString().slice(0, 10)}.${ext}`);
+        els.exportStatus.textContent = isMp4 ? "MP4 动画已生成。" : "浏览器不支持 MP4，本次已导出 WebM 动画。";
+      } catch (error) {
+        console.error(error);
+        els.exportStatus.textContent = `视频导出失败：${getErrorMessage(error)}`;
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+        if (wasChecked) {
+          els.typewriterToggle.checked = true;
+          completeTypewriter();
+        } else {
+          els.typewriterToggle.checked = false;
+          disableTypewriter();
+        }
+      }
     }
 
-    function exportErrorMessage(error) {
-      if (error?.name === "SecurityError") return "图片文件可能包含跨域或外部引用，浏览器禁止写入导出文件。";
-      return error?.message || "生成文件时发生未知错误。";
+    function getErrorMessage(error) {
+      const message = String(error?.message || error || "未知错误");
+      if (/tainted/i.test(message)) return "浏览器安全策略阻止画布导出，已切换到安全渲染路径后请重试。";
+      if (/empty video/i.test(message)) return "视频编码器没有生成有效数据，请换用最新版 Edge 或 Chrome。";
+      return message.length > 64 ? `${message.slice(0, 64)}...` : message;
+    }
+
+    function getSupportedVideoMime() {
+      return [
+        "video/mp4;codecs=avc1.42E01E",
+        "video/mp4",
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm"
+      ].find((type) => MediaRecorder.isTypeSupported(type));
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
 
     function downloadBlob(blob, filename) {
@@ -1789,28 +2913,14 @@
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    async function makePdfFromCanvas(canvas, pageWidth, pageHeight) {
-      const imageWidth = canvas.width;
-      const imageHeight = canvas.height;
-      const ctx = canvas.getContext("2d");
-      const imageData = ctx.getImageData(0, 0, imageWidth, imageHeight).data;
-      const rgbRows = new Uint8Array((imageWidth * 3 + 1) * imageHeight);
-      let out = 0;
-      for (let y = 0; y < imageHeight; y += 1) {
-        rgbRows[out++] = 0;
-        for (let x = 0; x < imageWidth; x += 1) {
-          const i = (y * imageWidth + x) * 4;
-          const alpha = imageData[i + 3] / 255;
-          rgbRows[out++] = Math.round(imageData[i] * alpha + 255 * (1 - alpha));
-          rgbRows[out++] = Math.round(imageData[i + 1] * alpha + 255 * (1 - alpha));
-          rgbRows[out++] = Math.round(imageData[i + 2] * alpha + 255 * (1 - alpha));
-        }
-      }
-      const imageBytes = zlibStore(rgbRows);
+    async function makePdfFromJpeg(jpegBlob, imageWidth, imageHeight, pageWidth, pageHeight) {
+      const imageBytes = new Uint8Array(await jpegBlob.arrayBuffer());
       const chunks = [];
       const offsets = [];
       let size = 0;
@@ -1829,7 +2939,7 @@
       obj("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
       obj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
       offsets.push(size);
-      push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ${imageWidth} >> /Length ${imageBytes.length} >>\nstream\n`);
+      push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`);
       push(imageBytes);
       push("\nendstream\nendobj\n");
       const content = `q\n${pageWidth.toFixed(2)} 0 0 ${pageHeight.toFixed(2)} 0 0 cm\n/Im0 Do\nQ\n`;
@@ -1842,48 +2952,6 @@
       return new Blob(chunks, { type: "application/pdf" });
     }
 
-    function zlibStore(data) {
-      const blocks = [];
-      let offset = 0;
-      while (offset < data.length) {
-        const len = Math.min(65535, data.length - offset);
-        const block = new Uint8Array(5 + len);
-        block[0] = offset + len >= data.length ? 1 : 0;
-        block[1] = len & 255;
-        block[2] = (len >> 8) & 255;
-        const nlen = (~len) & 65535;
-        block[3] = nlen & 255;
-        block[4] = (nlen >> 8) & 255;
-        block.set(data.subarray(offset, offset + len), 5);
-        blocks.push(block);
-        offset += len;
-      }
-      const checksum = adler32(data);
-      const output = new Uint8Array(2 + blocks.reduce((sum, block) => sum + block.length, 0) + 4);
-      let cursor = 0;
-      output[cursor++] = 0x78;
-      output[cursor++] = 0x01;
-      blocks.forEach((block) => {
-        output.set(block, cursor);
-        cursor += block.length;
-      });
-      output[cursor++] = (checksum >>> 24) & 255;
-      output[cursor++] = (checksum >>> 16) & 255;
-      output[cursor++] = (checksum >>> 8) & 255;
-      output[cursor++] = checksum & 255;
-      return output;
-    }
-
-    function adler32(data) {
-      let a = 1;
-      let b = 0;
-      for (let i = 0; i < data.length; i += 1) {
-        a = (a + data[i]) % 65521;
-        b = (b + a) % 65521;
-      }
-      return ((b << 16) | a) >>> 0;
-    }
-
     function asciiBytes(text) {
       const bytes = new Uint8Array(text.length);
       for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i) & 255;
@@ -1892,14 +2960,7 @@
 
     els.exportPngBottom.addEventListener("click", exportPosterPng);
     els.printPdfBottom.addEventListener("click", exportPosterPdf);
-    window.addEventListener("resize", () => {
-      updateCanvasFit();
-      queueTypewriterRebuild();
-    });
-    document.fonts?.ready.then(() => {
-      updateCanvasFit();
-      queueTypewriterRebuild();
-    });
+    els.exportMp4Bottom.addEventListener("click", exportPosterMp4);
 
     function bindCanvasPan() {
       const stage = document.querySelector(".stage-wrap");
@@ -1933,7 +2994,7 @@
     }
 
     applyDefaults();
-    updateCanvasFit();
+    applySidebarState();
     bindCanvasPan();
   </script>
 </body>
