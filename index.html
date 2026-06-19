@@ -25,30 +25,31 @@
       --accent-soft: rgba(243, 163, 26, 0.16);
       --dock-bg: rgba(23, 28, 33, 0.9);
       --shadow: rgba(0, 0, 0, 0.34);
+      --app-height: 100vh;
       --canvas-fit-w: 720px;
       --poster-bg: #fffefa;
-      --main-color: #37bd16;
+      --main-color: #1ab79a;
       --secondary-color: #111111;
       --poster-pad: 3.8%;
-      --main-size: 20px;
+      --main-size: 30px;
       --main-latin-weight: 700;
       --main-cjk-weight: 700;
       --main-latin-stroke: 0px;
       --main-cjk-stroke: 0px;
-      --cjk-size-scale: 0.9em;
-      --cjk-baseline-shift: -0.01em;
+      --cjk-size-scale: 0.88em;
+      --cjk-baseline-shift: -0.055em;
       --main-tracking: 0em;
-      --main-leading: 0.98;
+      --main-leading: 1;
       --main-align: left;
       --secondary-size: 10px;
       --secondary-tracking: 0em;
       --secondary-leading: 1.12;
-      --main-stroke-color: #111111;
       --secondary-align: left;
+      --main-stroke-color: #ffffff;
       --image-scale: 1.18;
-      --image-shift: -0.22em;
-      --main-latin: Inter, Arial, sans-serif;
-      --main-cjk: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+      --image-shift: -0.12em;
+      --main-latin: Inter, sans-serif;
+      --main-cjk: "Noto Sans SC", sans-serif;
     }
 
     body[data-ui-theme="light"] {
@@ -79,10 +80,14 @@
 
     body {
       margin: 0;
-      min-height: 100vh;
+      min-height: var(--app-height);
       background: var(--ui-bg);
       color: var(--ink);
-      font-family: Inter, "Helvetica Neue", Arial, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-family: Inter, "Noto Sans SC", sans-serif;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      overscroll-behavior: none;
+      touch-action: manipulation;
     }
 
     input,
@@ -97,7 +102,7 @@
       --sidebar-offset: var(--sidebar-width);
       display: grid;
       grid-template-columns: var(--sidebar-offset) minmax(0, 1fr);
-      min-height: 100vh;
+      min-height: var(--app-height);
       transition: grid-template-columns 180ms ease;
     }
 
@@ -108,8 +113,10 @@
     .sidebar {
       grid-column: 1;
       width: var(--sidebar-width);
-      height: 100vh;
+      height: var(--app-height);
       overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       padding: 14px 12px 18px;
       border-right: 1px solid var(--line);
       background: var(--panel);
@@ -121,6 +128,7 @@
     .app.sidebar-collapsed .sidebar {
       position: fixed;
       inset: 0 auto 0 0;
+      max-width: min(var(--sidebar-width), calc(100vw - 18px));
       transform: translateX(-100%);
       pointer-events: none;
     }
@@ -214,13 +222,13 @@
       position: relative;
       display: inline-grid;
       place-items: center;
-      width: 34px;
-      min-width: 34px;
-      height: 34px;
-      min-height: 34px;
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      min-height: 30px;
       padding: 0;
       border-color: var(--line);
-      border-radius: 9px;
+      border-radius: 8px;
       background: var(--field-bg-strong);
       color: var(--ink);
       user-select: none;
@@ -228,18 +236,25 @@
     }
 
     .toolbar-toggle::before {
-      content: "";
-      width: 14px;
-      height: 11px;
-      background:
-        linear-gradient(currentColor, currentColor) 0 1px / 14px 2px no-repeat,
-        linear-gradient(currentColor, currentColor) 0 5px / 14px 2px no-repeat,
-        linear-gradient(currentColor, currentColor) 0 9px / 14px 2px no-repeat;
-      opacity: 0.9;
+      content: none;
     }
 
     .toolbar-toggle::after {
-      content: none;
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-left: 2.6px solid currentColor;
+      border-bottom: 2.6px solid currentColor;
+      border-radius: 1px;
+      opacity: 0.86;
+      transform: translate(-35%, -50%) rotate(45deg);
+    }
+
+    .toolbar-float-toggle::after {
+      transform: translate(-65%, -50%) rotate(-135deg);
     }
 
     .toolbar-float-toggle {
@@ -359,22 +374,124 @@
       align-items: end;
     }
 
+    .font-upload-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 32px;
+      margin: 0;
+      border-color: var(--line-strong);
+      border-radius: 6px;
+      background: var(--panel-3);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .font-upload-button::before {
+      content: "↑";
+      font-size: 15px;
+      line-height: 1;
+    }
+
     .color-field,
     .stroke-field {
       display: grid;
-      gap: 6px;
+      gap: 7px;
       margin: 8px 0;
+      min-width: 0;
       font-size: 11px;
       font-weight: 760;
       color: var(--muted);
     }
 
+    .control-toggle {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) 10px;
+      gap: 7px;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 7px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-align: left;
+    }
+
+    .control-toggle:hover,
+    .control-toggle[aria-expanded="true"] {
+      border-color: var(--line-strong);
+      background: var(--field-bg-strong);
+      color: var(--ink);
+    }
+
+    .control-toggle::after {
+      content: "";
+      justify-self: end;
+      width: 5px;
+      height: 5px;
+      border-right: 1.6px solid currentColor;
+      border-bottom: 1.6px solid currentColor;
+      transform: rotate(45deg);
+      transition: transform 0.16s ease;
+    }
+
+    .control-toggle[aria-expanded="true"]::after {
+      transform: rotate(-135deg) translate(-1px, -1px);
+    }
+
+    .control-icon {
+      position: relative;
+      display: inline-grid;
+      width: 16px;
+      height: 16px;
+      place-items: center;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .control-icon.color-icon::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--main-color);
+    }
+
+    .control-icon.stroke-icon::before {
+      content: "";
+      width: 14px;
+      height: 12px;
+      background:
+        linear-gradient(currentColor, currentColor) 2px 0 / 2px 100% no-repeat,
+        linear-gradient(currentColor, currentColor) 6px 0 / 2px 100% no-repeat,
+        linear-gradient(currentColor, currentColor) 10px 0 / 2px 100% no-repeat;
+      opacity: 0.9;
+    }
+
+    .control-panel {
+      display: none;
+      gap: 7px;
+      min-width: 0;
+      padding-right: 4px;
+    }
+
+    .color-field.is-open .control-panel,
+    .stroke-field.is-open .control-panel {
+      display: grid;
+    }
+
     .color-control {
       display: grid;
-      grid-template-columns: minmax(82px, 0.9fr) minmax(112px, 1.15fr) minmax(82px, 0.9fr);
-      gap: 6px;
+      grid-template-columns: minmax(0, 72px) minmax(0, 1fr) minmax(0, 72px);
+      gap: 7px;
       align-items: center;
       width: 100%;
+      min-width: 0;
     }
 
     .color-mode,
@@ -391,8 +508,8 @@
       min-width: 0;
       border-color: var(--line);
       font-size: 12px;
-      overflow: visible;
-      padding-inline: 6px;
+      overflow: hidden;
+      padding-inline: 5px;
     }
 
     .color-mode::before,
@@ -402,8 +519,8 @@
       content: "";
       position: absolute;
       top: 50%;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border: 0;
       border-radius: 50%;
       transform: translateY(-50%);
@@ -412,16 +529,16 @@
 
     .color-mode::before,
     .color-random::before {
-      left: 8px;
+      left: 6px;
       background: var(--color-back, #050505);
       z-index: 1;
     }
 
     .color-mode::after,
     .color-random::after {
-      left: 16px;
-      width: 17px;
-      height: 17px;
+      left: 12px;
+      width: 15px;
+      height: 15px;
       background: var(--color-front, #ffffff);
       z-index: 2;
     }
@@ -429,7 +546,7 @@
     .color-mode span,
     .color-random span {
       display: block;
-      padding-left: 34px;
+      padding-left: 26px;
       font-size: 11px;
       font-weight: 800;
       color: var(--muted);
@@ -438,19 +555,20 @@
 
     .color-value {
       display: grid;
-      grid-template-columns: 28px minmax(0, 1fr);
-      gap: 6px;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 5px;
       align-items: center;
       min-height: 34px;
-      padding: 4px 7px;
+      min-width: 0;
+      padding: 4px 6px;
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 8px;
       background: var(--field-bg-strong);
     }
 
     .color-value input[type="color"] {
-      width: 24px;
-      height: 24px;
+      width: 22px;
+      height: 22px;
       padding: 0;
       border: 0;
       border-radius: 7px;
@@ -459,7 +577,8 @@
 
     .color-hex {
       min-height: 24px;
-      padding: 2px 4px;
+      min-width: 0;
+      padding: 2px 2px;
       border: 0;
       background: transparent;
       color: var(--muted);
@@ -470,14 +589,14 @@
 
     .stroke-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 64px;
+      grid-template-columns: minmax(0, 1fr) 82px;
       gap: 7px;
       align-items: center;
     }
 
     .row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 70px;
+      grid-template-columns: minmax(0, 1fr) 82px;
       gap: 9px;
       align-items: center;
     }
@@ -523,6 +642,7 @@
 
     select {
       appearance: none;
+      -webkit-appearance: none;
       background-image:
         linear-gradient(45deg, transparent 50%, var(--muted) 50%),
         linear-gradient(135deg, var(--muted) 50%, transparent 50%);
@@ -555,6 +675,29 @@
 
     .compact textarea {
       min-height: 54px;
+    }
+
+    .footer-toggle {
+      min-height: 32px;
+    }
+
+    .footer-text-fields {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .footer-text-fields[hidden] {
+      display: none;
+    }
+
+    .footer-settings {
+      transition: opacity 0.16s ease;
+    }
+
+    .footer-settings.is-disabled {
+      opacity: 0.42;
+      pointer-events: none;
     }
 
     button {
@@ -736,6 +879,34 @@
       color: var(--ink);
     }
 
+    .unit-input {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      min-width: 0;
+      min-height: 28px;
+      padding: 0 6px 0 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--field-bg-strong);
+      overflow: hidden;
+    }
+
+    .unit-input .value {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .unit-label {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+      user-select: none;
+    }
+
     input.value {
       min-height: 28px;
       width: 70px;
@@ -743,18 +914,26 @@
       font-size: 11px;
       font-weight: 800;
       appearance: textfield;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
     }
 
     input.value::-webkit-outer-spin-button,
     input.value::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button,
     .dock-value::-webkit-outer-spin-button,
     .dock-value::-webkit-inner-spin-button {
       margin: 0;
+      display: none;
       appearance: none;
+      -webkit-appearance: none;
     }
 
     input[type="number"] {
       appearance: textfield;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
     }
 
     .hint {
@@ -817,12 +996,29 @@
       padding: 0 9px 9px;
     }
 
+    .image-process .advanced-body {
+      display: grid;
+      gap: 9px;
+    }
+
+    .image-process .control-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .image-process .row {
+      grid-template-columns: minmax(0, 1fr) 62px;
+      gap: 8px;
+    }
+
     .stage-wrap {
       grid-column: 2;
       position: relative;
       min-width: 0;
-      height: 100vh;
+      height: var(--app-height);
       overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       padding: 58px 44px 84px;
       display: grid;
       place-items: center;
@@ -855,6 +1051,7 @@
       border-radius: 17px;
       background: var(--dock-bg);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       transform: translateX(-50%);
       box-shadow: 0 14px 34px rgba(0, 0, 0, 0.13);
     }
@@ -868,6 +1065,7 @@
       border: 1px solid var(--line);
       border-radius: 13px;
       background: var(--panel-2);
+      flex: 0 0 auto;
     }
 
     .dock-label {
@@ -878,9 +1076,9 @@
     }
 
     .dock-value {
-      width: 64px;
+      width: 70px;
       min-height: 32px;
-      padding: 4px 9px;
+      padding: 4px 8px;
       border: 0;
       border-radius: 11px;
       background: var(--panel-3);
@@ -889,6 +1087,8 @@
       font-size: 14px;
       font-weight: 900;
       appearance: textfield;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
     }
 
     .dock-unit {
@@ -899,7 +1099,7 @@
     }
 
     .dock-select {
-      width: 150px;
+      width: 162px;
       min-height: 32px;
       border: 0;
       border-radius: 11px;
@@ -907,6 +1107,7 @@
       color: var(--ink);
       font-size: 14px;
       font-weight: 900;
+      -webkit-appearance: none;
     }
 
     .canvas-dock button {
@@ -1034,7 +1235,7 @@
 
     .secondary-copy {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: clamp(18px, 6%, 64px);
       align-items: end;
       margin-top: 22px;
@@ -1046,19 +1247,22 @@
       paint-order: stroke fill;
       line-height: var(--secondary-leading);
       letter-spacing: var(--secondary-tracking);
-      text-align: var(--secondary-align);
       word-break: normal;
       overflow-wrap: anywhere;
       line-break: loose;
     }
 
-    .secondary-copy > div {
-      min-width: 0;
+    .poster.footer-hidden {
+      grid-template-rows: 1fr;
     }
 
-    .secondary-copy > div:last-child {
-      white-space: nowrap;
-      justify-self: end;
+    .poster.footer-hidden .secondary-copy {
+      display: none;
+    }
+
+    .secondary-copy > div {
+      text-align: var(--secondary-align);
+      min-width: 0;
     }
 
     .cjk-main {
@@ -1088,10 +1292,21 @@
       transform-origin: 50% 70%;
     }
 
+    .image-token {
+      display: inline-block;
+      white-space: nowrap;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      word-break: keep-all;
+      overflow-wrap: normal;
+      line-height: inherit;
+      vertical-align: baseline;
+    }
+
     .inline-image {
       display: inline-flex;
       width: calc(1em * var(--image-scale));
-      height: calc(1em * var(--image-scale) * 0.84);
+      height: calc(1em * var(--image-scale) * 0.78);
       margin: 0 0.08em;
       vertical-align: var(--image-shift);
       align-items: center;
@@ -1109,30 +1324,28 @@
       border: 2px dashed #b8bcb3;
       border-radius: 7px;
       color: #8b9087;
-      font-size: 0.34em;
+      font-size: 0.28em;
       font-weight: 800;
+      line-height: 1;
       letter-spacing: 0;
+      text-align: center;
+      white-space: nowrap;
     }
 
     .paren {
       display: inline-block;
-      font-size: 1.3em;
-      line-height: 0.78;
+      font-size: 1.18em;
+      line-height: 0;
+      vertical-align: -0.02em;
       letter-spacing: 0;
     }
 
-    .typewriter-cover-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 12;
-      pointer-events: none;
+    .typewriter-unit {
+      opacity: var(--typewriter-opacity, 1);
     }
 
-    .typewriter-cover {
-      position: absolute;
-      border-radius: 1px;
-      background: var(--poster-bg);
-      will-change: opacity;
+    .image-token.typewriter-unit {
+      display: inline-block;
     }
 
     @media (max-width: 900px) {
@@ -1141,15 +1354,15 @@
       }
 
       .sidebar {
-        height: 100vh;
-        max-height: 100vh;
+        height: var(--app-height);
+        max-height: var(--app-height);
         border-right: 1px solid var(--line);
         border-bottom: 0;
       }
 
       .stage-wrap {
-        height: 100vh;
-        min-height: 100vh;
+        height: var(--app-height);
+        min-height: var(--app-height);
         padding: 42px 16px 96px;
       }
 
@@ -1166,15 +1379,111 @@
         width: 100%;
       }
     }
+
+    @media (max-width: 720px), (pointer: coarse) and (max-width: 1024px) {
+      .app {
+        --sidebar-width: min(338px, calc(100vw - 18px));
+      }
+
+      .toolbar-float-toggle {
+        left: 10px;
+        top: max(10px, env(safe-area-inset-top));
+      }
+
+      .sidebar {
+        padding: max(12px, env(safe-area-inset-top)) 10px max(16px, env(safe-area-inset-bottom));
+      }
+
+      .stage-wrap {
+        padding:
+          max(44px, calc(env(safe-area-inset-top) + 34px))
+          12px
+          max(128px, calc(env(safe-area-inset-bottom) + 112px));
+      }
+
+      .canvas-dock {
+        left: 50%;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: calc(100vw - 20px);
+        max-width: 420px;
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 6px;
+        border-radius: 14px;
+      }
+
+      .dock-group {
+        min-height: 34px;
+        padding: 4px 6px;
+        gap: 4px;
+        border-radius: 11px;
+      }
+
+      .dock-label,
+      .dock-unit {
+        font-size: 11px;
+      }
+
+      .dock-value {
+        width: 54px;
+        min-height: 29px;
+        padding: 3px 6px;
+        font-size: 12px;
+      }
+
+      .dock-select {
+        width: 118px;
+        min-height: 29px;
+        font-size: 12px;
+      }
+
+      .canvas-dock button,
+      .theme-icon-button {
+        min-width: 34px;
+        width: 34px;
+        min-height: 34px;
+        height: 34px;
+        border-radius: 11px;
+      }
+
+      .poster-shell {
+        max-width: calc(100vw - 24px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-header {
+        gap: 8px;
+      }
+
+      .app-title {
+        font-size: 14px;
+      }
+
+      .reset-button {
+        min-width: 60px;
+        min-height: 30px;
+        padding: 6px 8px;
+        font-size: 12px;
+      }
+
+      .canvas-dock {
+        justify-content: center;
+      }
+    }
   </style>
 </head>
-<body data-ui-theme="light">
+<body data-ui-theme="dark">
   <main class="app" id="app">
     <button id="sidebarFloatingToggle" class="toolbar-toggle toolbar-float-toggle" type="button" aria-label="打开工具栏" aria-expanded="false"></button>
     <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
     <aside class="sidebar" aria-label="排版控制">
       <div class="app-header">
-        <div class="app-title">Auto-Zonglin tools</div>
+        <div class="app-title">Auto Zonglin</div>
         <div class="header-actions">
           <button id="resetDefaults" class="reset-button" type="button">Reset</button>
           <button id="sidebarToggle" class="toolbar-toggle" type="button" aria-label="折叠工具栏" aria-expanded="true"></button>
@@ -1189,7 +1498,7 @@
               画布大小
               <div class="row">
                 <input id="canvasWidth" type="range" min="10" max="100" value="100">
-                <input id="canvasWidthValue" class="value" type="number" min="10" max="100" value="100" aria-label="画布显示大小百分比">
+                <span class="unit-input"><input id="canvasWidthValue" class="value" type="number" min="10" max="100" value="100" aria-label="画布显示大小百分比"><span class="unit-label">%</span></span>
               </div>
             </label>
           </div>
@@ -1202,36 +1511,36 @@
           <div class="section-body">
             <label>
               文字内容
-              <textarea id="mainText" spellcheck="false"></textarea>
+              <textarea id="mainText" spellcheck="false" autocomplete="off"></textarea>
             </label>
           </div>
         </details>
       </section>
 
       <section class="section">
-        <details class="section-panel">
-          <summary class="section-title"><span class="section-icon">A</span><span class="section-name">Type 字符</span></summary>
+        <details id="typeSettingsPanel" class="section-panel">
+          <summary class="section-title"><span class="section-icon">A</span><span class="section-name">Type 字符设置</span></summary>
           <div class="section-body">
         <div class="control-grid">
           <label>
             英文字体
             <select id="mainLatin">
-              <option value='Inter, Arial, sans-serif'>Inter</option>
-              <option value='Arial, "Arial Black", sans-serif'>Arial / Arial Black</option>
-              <option value='Impact, "Arial Narrow", sans-serif'>Impact</option>
-              <option value='"Franklin Gothic Medium", Arial, sans-serif'>Franklin Gothic</option>
+              <option value='Inter, sans-serif'>Inter</option>
             </select>
           </label>
           <label>
             中文字体
             <select id="mainCjk">
-              <option value='"Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif'>Noto Sans SC</option>
-              <option value='"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'>思源黑体</option>
-              <option value='MiSans, "Microsoft YaHei", "Noto Sans SC", sans-serif'>小米兰亭黑</option>
-              <option value='"Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif'>微软雅黑 UI</option>
+              <option value='"Noto Sans SC", sans-serif'>Noto Sans SC</option>
             </select>
           </label>
         </div>
+        <div class="control-grid">
+          <button id="customLatinFontButton" class="secondary font-upload-button" type="button">上传英文字体</button>
+          <button id="customCjkFontButton" class="secondary font-upload-button" type="button">上传中文字体</button>
+        </div>
+        <input id="customLatinFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple hidden>
+        <input id="customCjkFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple hidden>
         <div class="control-grid">
           <label>
             英文字重
@@ -1258,28 +1567,28 @@
             </select>
           </label>
         </div>
-        <details class="advanced">
+        <details id="mainTypographyAdvanced" class="advanced">
           <summary>字号 / 字间距 / 行间距</summary>
           <div class="advanced-body">
             <label>
               字号
               <div class="row">
-                <input id="mainSize" type="range" min="5" max="100" value="20">
-                <input id="mainSizeValue" class="value" type="number" min="5" max="100" value="20" aria-label="正文字号数值">
+                <input id="mainSize" type="range" min="5" max="100" value="30">
+                <span class="unit-input"><input id="mainSizeValue" class="value" type="number" min="5" max="100" value="30" aria-label="正文字号数值"><span class="unit-label">px</span></span>
               </div>
             </label>
             <label>
               字间距
               <div class="row">
                 <input id="mainTracking" type="range" min="-8" max="10" value="0">
-                <input id="mainTrackingValue" class="value" type="number" min="-8" max="10" value="0" aria-label="正文字间距数值">
+                <span class="unit-input"><input id="mainTrackingValue" class="value" type="number" min="-8" max="10" value="0" aria-label="正文字间距数值"><span class="unit-label">%</span></span>
               </div>
             </label>
             <label>
               行间距
               <div class="row">
-                <input id="mainLeading" type="range" min="78" max="150" value="98">
-                <input id="mainLeadingValue" class="value" type="number" min="78" max="150" value="98" aria-label="正文行间距数值">
+                <input id="mainLeading" type="range" min="78" max="150" value="100">
+                <span class="unit-input"><input id="mainLeadingValue" class="value" type="number" min="78" max="150" value="100" aria-label="正文行间距数值"><span class="unit-label">%</span></span>
               </div>
             </label>
           </div>
@@ -1299,30 +1608,40 @@
             <button id="randomLetters" class="secondary" type="button">随机字母大小</button>
           </div>
         </div>
-        <div class="color-field">
-          文字颜色
+        <div class="color-field" id="mainColorPanel">
+          <button class="control-toggle" id="mainColorToggle" type="button" aria-expanded="false" aria-controls="mainColorOptions">
+            <span class="control-icon color-icon" aria-hidden="true"></span>
+            <span>文字颜色</span>
+          </button>
+          <div class="control-panel" id="mainColorOptions">
           <div class="color-control">
             <button id="mainColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
             <div class="color-value">
-              <input id="mainColor" type="color" value="#37bd16">
-              <input id="mainColorHex" class="color-hex" type="text" value="#37bd16" aria-label="文字颜色色号" spellcheck="false">
+              <input id="mainColor" type="color" value="#1ab79a">
+              <input id="mainColorHex" class="color-hex" type="text" value="#1ab79a" aria-label="文字颜色色号" spellcheck="false">
             </div>
             <button id="randomMainColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
           </div>
+          </div>
         </div>
-        <div class="stroke-field">
-          描边
+        <div class="stroke-field" id="mainStrokePanel">
+          <button class="control-toggle" id="mainStrokeToggle" type="button" aria-expanded="false" aria-controls="mainStrokeOptions">
+            <span class="control-icon stroke-icon" aria-hidden="true"></span>
+            <span>文字描边</span>
+          </button>
+          <div class="control-panel" id="mainStrokeOptions">
           <div class="color-control">
-            <button id="mainStrokeColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <button id="mainStrokeColorMode" class="color-mode is-light secondary" type="button"><span>黑/白</span></button>
             <div class="color-value">
-              <input id="mainStrokeColor" type="color" value="#111111">
-              <input id="mainStrokeColorHex" class="color-hex" type="text" value="#111111" aria-label="描边颜色色号" spellcheck="false">
+              <input id="mainStrokeColor" type="color" value="#ffffff">
+              <input id="mainStrokeColorHex" class="color-hex" type="text" value="#ffffff" aria-label="描边颜色色号" spellcheck="false">
             </div>
             <button id="randomMainStrokeColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
           </div>
           <div class="stroke-row">
             <input id="mainStrokeWidth" type="range" min="0" max="8" step="0.5" value="0">
-            <input id="mainStrokeWidthValue" class="value" type="number" min="0" max="8" step="0.5" value="0" aria-label="描边宽度">
+            <span class="unit-input"><input id="mainStrokeWidthValue" class="value" type="number" min="0" max="8" step="0.5" value="0" aria-label="描边宽度"><span class="unit-label">px</span></span>
+          </div>
           </div>
         </div>
           </div>
@@ -1333,9 +1652,8 @@
         <details class="section-panel">
           <summary class="section-title"><span class="section-icon">T</span><span class="section-name">Text 副文本</span></summary>
           <div class="section-body">
-        <details class="advanced">
-          <summary>底部文字</summary>
-          <div class="advanced-body">
+        <button id="footerVisibilityToggle" class="secondary footer-toggle" type="button" aria-pressed="false" aria-controls="footerTextFields">底部文字</button>
+        <div id="footerTextFields" class="footer-text-fields" hidden>
             <label>
               左侧长栏
               <textarea id="footerOne" spellcheck="false"></textarea>
@@ -1348,8 +1666,8 @@
               右侧小栏
               <textarea id="footerThree" spellcheck="false"></textarea>
             </label>
-          </div>
-        </details>
+        </div>
+        <div id="secondaryTextControls" class="footer-settings" aria-disabled="true">
         <details class="advanced">
           <summary>字号 / 字间距 / 行间距</summary>
           <div class="advanced-body">
@@ -1357,27 +1675,31 @@
               字号
               <div class="row">
                 <input id="secondarySize" type="range" min="8" max="30" value="10">
-                <input id="secondarySizeValue" class="value" type="number" min="8" max="30" value="10" aria-label="底部字号数值">
+                <span class="unit-input"><input id="secondarySizeValue" class="value" type="number" min="8" max="30" value="10" aria-label="底部字号数值"><span class="unit-label">px</span></span>
               </div>
             </label>
             <label>
               字间距
               <div class="row">
                 <input id="secondaryTracking" type="range" min="-5" max="12" value="0">
-                <input id="secondaryTrackingValue" class="value" type="number" min="-5" max="12" value="0" aria-label="底部字间距数值">
+                <span class="unit-input"><input id="secondaryTrackingValue" class="value" type="number" min="-5" max="12" value="0" aria-label="底部字间距数值"><span class="unit-label">%</span></span>
               </div>
             </label>
             <label>
               行间距
               <div class="row">
                 <input id="secondaryLeading" type="range" min="80" max="160" value="112">
-                <input id="secondaryLeadingValue" class="value" type="number" min="80" max="160" value="112" aria-label="底部行间距数值">
+                <span class="unit-input"><input id="secondaryLeadingValue" class="value" type="number" min="80" max="160" value="112" aria-label="底部行间距数值"><span class="unit-label">%</span></span>
               </div>
             </label>
           </div>
         </details>
-        <div class="color-field">
-          文字颜色
+        <div class="color-field" id="secondaryColorPanel">
+          <button class="control-toggle" id="secondaryColorToggle" type="button" aria-expanded="false" aria-controls="secondaryColorOptions">
+            <span class="control-icon color-icon" aria-hidden="true"></span>
+            <span>文字颜色</span>
+          </button>
+          <div class="control-panel" id="secondaryColorOptions">
           <div class="color-control">
             <button id="secondaryColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
             <div class="color-value">
@@ -1386,17 +1708,17 @@
             </div>
             <button id="randomSecondaryColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
           </div>
+          </div>
         </div>
-        <div class="control-grid">
-          <label>
-            对齐方式
-            <div class="segmented" data-align-group="secondary">
-              <button type="button" data-align="left" class="is-active" aria-label="左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
-              <button type="button" data-align="center" aria-label="居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
-              <button type="button" data-align="right" aria-label="右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
-              <button type="button" data-align="justify" aria-label="两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
-            </div>
-          </label>
+        <label>
+          对齐方式
+          <div class="segmented" data-align-group="secondary">
+            <button type="button" data-align="left" class="is-active" aria-label="底部左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="center" aria-label="底部居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="right" aria-label="底部右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="justify" aria-label="底部两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
+          </div>
+        </label>
         </div>
           </div>
         </details>
@@ -1412,26 +1734,31 @@
             </div>
             <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple hidden>
             <p id="folderStatus" class="hint">尚未选择图片文件夹。文字里的空花括号会先显示为占位框。</p>
-            <div class="control-grid">
-              <label>
-                图片大小
-                <div class="row">
-                  <input id="imageScale" type="range" min="60" max="300" value="118">
-                  <input id="imageScaleValue" class="value" type="number" min="60" max="300" value="118" aria-label="图片大小数值">
+            <details class="advanced image-process">
+              <summary>图片处理</summary>
+              <div class="advanced-body">
+                <div class="control-grid">
+                  <label>
+                    图片大小
+                    <div class="row">
+                      <input id="imageScale" type="range" min="60" max="300" value="118">
+                      <span class="unit-input"><input id="imageScaleValue" class="value" type="number" min="60" max="300" value="118" aria-label="图片大小数值"><span class="unit-label">%</span></span>
+                    </div>
+                  </label>
+                  <label>
+                    图片基线
+                    <div class="row">
+                      <input id="imageShift" type="range" min="-45" max="30" value="-12">
+                      <span class="unit-input"><input id="imageShiftValue" class="value" type="number" min="-45" max="30" value="-12" aria-label="图片基线数值"><span class="unit-label">em</span></span>
+                    </div>
+                  </label>
                 </div>
-              </label>
-              <label>
-                图片基线
-                <div class="row">
-                  <input id="imageShift" type="range" min="-45" max="30" value="-22">
-                  <input id="imageShiftValue" class="value" type="number" min="-45" max="30" value="-22" aria-label="图片基线数值">
-                </div>
-              </label>
-            </div>
-            <label class="check-row">
-              <input id="randomRemoveBg" type="checkbox">
-              随机去背景
-            </label>
+                <label class="check-row">
+                  <input id="randomRemoveBg" type="checkbox">
+                  随机去背景
+                </label>
+              </div>
+            </details>
             <div class="color-field">
               背景色
               <div class="color-control">
@@ -1459,7 +1786,7 @@
               出现时间
               <div class="row">
                 <input id="typewriterDuration" type="range" min="1" max="12" step="0.5" value="3">
-                <input id="typewriterDurationValue" class="value" type="number" min="1" max="12" step="0.5" value="3" aria-label="打字机动画秒数">
+                <span class="unit-input"><input id="typewriterDurationValue" class="value" type="number" min="1" max="12" step="0.5" value="3" aria-label="打字机动画秒数"><span class="unit-label">s</span></span>
               </div>
             </label>
           </div>
@@ -1491,7 +1818,7 @@
     </aside>
 
     <section class="stage-wrap" aria-label="海报预览">
-      <div id="posterShell" class="poster-shell">
+      <div class="poster-shell">
         <article id="poster" class="poster">
           <div id="mainCopy" class="main-copy" lang="zh-CN"></div>
           <footer class="secondary-copy">
@@ -1529,7 +1856,7 @@
 
   <script>
     const defaults = {
-      mainText: "AUTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images { } / choose a folder and let every text marker become an inline visual interruption { } / typography, image scale, color, rhythm, and spacing can be adjusted while the composition keeps reflowing { } / English copy leads the reading path, with Chinese annotation following as a second voice { } / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / the final canvas can be exported as PNG or PDF for poster tests, layout studies, and visual collections { } / 中文说明在后方补充功能语义与使用场景 { } / { } / { } / { }",
+      mainText: "UTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images []/ choose a folder and let every text marker become an inline visual interruption () / typography, image scale, color, rhythm, and spacing can be adjusted while the composition keeps reflowing { } / English copy leads the reading path, with Chinese annotation following as a second voice () / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / the final canvas can be exported as PNG or PDF for poster tests, layout studies, and visual collections { } / 可以通过不同形式括号来嵌入图片{ }/()/Images can be embedded using different forms of brackets/ {}/[ ].",
       footerOne: "We look at all the different topics in the world from our perspective.\n从不同视角收集图像与文字。",
       footerTwo: "And we're collecting these themes and creating them in various new forms.\n让图文搭配生成新的版式。",
       footerThree: "/ Collected by Zonglin"
@@ -1544,11 +1871,29 @@
       exportScale: 1,
       typewriterTimer: 0,
       typewriterFrame: 0,
-      typewriterPlaying: false,
-      typewriterCoverItems: [],
+      typewriterUnits: [],
+      typewriterCompleted: false,
+      footerVisible: true,
       sidebarUserCollapsed: false,
       sidebarOverlayOpen: false,
+      touchDevice: false,
+      customFontWeights: {
+        latin: new Map(),
+        cjk: new Map()
+      },
       seed: Date.now()
+    };
+    const defaultWeightOptions = {
+      latin: Array.from(els.mainLatinWeight.options).map((option) => ({
+        value: option.value,
+        label: option.textContent,
+        selected: option.defaultSelected
+      })),
+      cjk: Array.from(els.mainCjkWeight.options).map((option) => ({
+        value: option.value,
+        label: option.textContent,
+        selected: option.defaultSelected
+      }))
     };
 
     function setVar(name, value) {
@@ -1605,6 +1950,10 @@
       return html;
     }
 
+    function decorateMultilineText(text, secondary = false) {
+      return String(text || "").split(/\r?\n/).map((line) => decoratePlainText(line, secondary)).join("<br>");
+    }
+
     function shuffle(array) {
       const copy = array.slice();
       for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -1632,11 +1981,11 @@
       const items = state.imageOrder.length ? state.imageOrder : state.imageItems;
       const item = items[index % Math.max(items.length, 1)];
       if (!item) {
-        return `<span class="paren">${open}</span><span class="inline-image empty-image">IMG</span><span class="paren">${close}</span>`;
+        return `<span class="image-token"><span class="paren">${open}</span><span class="inline-image empty-image">IMG</span><span class="paren">${close}</span></span>`;
       }
       const useCutout = els.randomRemoveBg.checked && item.cutout && item.clearSubject && seeded(index, 701) > 0.34;
       const src = useCutout ? item.cutout : item.src;
-      return `<span class="paren">${open}</span><span class="inline-image"><img src="${src}" alt=""></span><span class="paren">${close}</span>`;
+      return `<span class="image-token"><span class="paren">${open}</span><span class="inline-image"><img src="${src}" alt=""></span><span class="paren">${close}</span></span>`;
     }
 
     function renderMain() {
@@ -1649,15 +1998,15 @@
           slot += 1;
           return markup;
         }
-        return decoratePlainText(part);
+        return decorateMultilineText(part);
       }).join("");
       refreshTypewriter();
     }
 
     function renderFooter() {
-      els.footerOneOut.innerHTML = decoratePlainText(els.footerOne.value, true).replace(/\n/g, "<br>");
-      els.footerTwoOut.innerHTML = decoratePlainText(els.footerTwo.value, true).replace(/\n/g, "<br>");
-      els.footerThreeOut.innerHTML = decoratePlainText(els.footerThree.value, true).replace(/\n/g, "<br>");
+      els.footerOneOut.innerHTML = decorateMultilineText(els.footerOne.value, true);
+      els.footerTwoOut.innerHTML = decorateMultilineText(els.footerTwo.value, true);
+      els.footerThreeOut.innerHTML = decorateMultilineText(els.footerThree.value, true);
       refreshTypewriter();
     }
 
@@ -1672,30 +2021,29 @@
         completeTypewriter();
         return;
       }
-      startTypewriterMaskAnimation();
+      startTypewriterAnimation();
     }
 
-    function startTypewriterMaskAnimation() {
+    function startTypewriterAnimation() {
       clearTypewriterTimer();
-      removeTypewriterCovers();
-      const items = buildTypewriterCovers();
+      const items = buildTypewriterUnits();
       const seconds = Math.max(0.2, Number(els.typewriterDuration?.value || 3));
       const startedAt = performance.now();
-      state.typewriterPlaying = true;
 
       const tick = (now) => {
         const progress = Math.min(1, (now - startedAt) / (seconds * 1000));
-        setTypewriterCoverReveal(items, Math.floor(progress * items.length));
+        setTypewriterUnitReveal(items, Math.floor(progress * items.length));
         if (progress < 1) {
           state.typewriterFrame = requestAnimationFrame(tick);
           return;
         }
-        setTypewriterCoverReveal(items, items.length);
+        setTypewriterUnitReveal(items, items.length);
         state.typewriterTimer = window.setTimeout(() => {
           completeTypewriter();
+          state.typewriterCompleted = true;
         }, 80);
       };
-      setTypewriterCoverReveal(items, 0);
+      setTypewriterUnitReveal(items, 0);
       state.typewriterFrame = requestAnimationFrame(tick);
     }
 
@@ -1711,109 +2059,121 @@
     }
 
     function completeTypewriter() {
-      removeTypewriterCovers();
+      setTypewriterUnitReveal(state.typewriterUnits, state.typewriterUnits.length);
       state.typewriterTimer = 0;
       state.typewriterFrame = 0;
-      state.typewriterPlaying = false;
     }
 
     function disableTypewriter() {
-      removeTypewriterCovers();
+      cleanupTypewriterUnits();
       state.typewriterTimer = 0;
       state.typewriterFrame = 0;
-      state.typewriterPlaying = false;
+      state.typewriterCompleted = false;
     }
 
-    function buildTypewriterCovers() {
-      const layer = document.createElement("div");
-      layer.className = "typewriter-cover-layer";
-      const posterRect = els.poster.getBoundingClientRect();
-      const bg = getComputedStyle(els.poster).backgroundColor;
-      const targets = collectTypewriterTargets([els.mainCopy, document.querySelector(".secondary-copy")]);
-      const items = [];
-
-      targets.forEach((target) => {
-        const rects = target.type === "text"
-          ? getTextTargetRects(target)
-          : Array.from(target.node.getClientRects());
-        const covers = rects.map((rect) => createTypewriterCover(rect, posterRect, bg)).filter(Boolean);
-        if (covers.length) {
-          covers.forEach((cover) => layer.appendChild(cover));
-          items.push(covers);
-        }
-      });
-
-      els.poster.appendChild(layer);
-      state.typewriterCoverItems = items;
-      return items;
+    function closeCompletedTypewriter() {
+      if (!state.typewriterCompleted || !els.typewriterToggle.checked) return;
+      els.typewriterToggle.checked = false;
+      disableTypewriter();
     }
 
-    function collectTypewriterTargets(roots) {
-      const targets = [];
-      const walk = (node) => {
-        if (!node) return;
-        if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("inline-image")) {
-          targets.push({ type: "element", node });
-          return;
-        }
-        if (node.nodeType === Node.TEXT_NODE) {
-          tokenizeWithOffsets(node.textContent || "").forEach((token) => {
-            if (!/^\s+$/.test(token.value)) {
-              targets.push({ type: "text", node, start: token.start, end: token.end });
-            }
-          });
-          return;
-        }
-        node.childNodes.forEach(walk);
-      };
-      roots.forEach(walk);
-      return targets;
+    function handleControlInteraction(event) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#exportMp4Bottom") || target.closest("#typewriterToggle")) return;
+      if (!target.closest(".sidebar") && !target.closest(".canvas-dock")) return;
+      closeCompletedTypewriter();
     }
 
-    function tokenizeWithOffsets(text) {
-      const tokens = [];
-      const pattern = /[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|\s+|./gu;
-      let match;
-      while ((match = pattern.exec(text))) {
-        tokens.push({ value: match[0], start: match.index, end: match.index + match[0].length });
+    function getViewportHeight() {
+      return Math.round(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+    }
+
+    function updateViewportMetrics() {
+      const height = Math.max(320, getViewportHeight());
+      setVar("--app-height", `${height}px`);
+      state.touchDevice = window.matchMedia?.("(pointer: coarse)")?.matches || navigator.maxTouchPoints > 0;
+      document.body.classList.toggle("is-touch-device", state.touchDevice);
+      document.body.classList.toggle("is-safari", /^((?!chrome|android).)*safari/i.test(navigator.userAgent));
+      updateImagePickerMode();
+      updateCanvasFit();
+    }
+
+    function supportsDirectoryPicker() {
+      return "showDirectoryPicker" in window || "webkitdirectory" in document.createElement("input");
+    }
+
+    function prefersFilePicker() {
+      return state.touchDevice || !supportsDirectoryPicker();
+    }
+
+    function updateImagePickerMode() {
+      if (!els.pickFolder || !els.folderInput) return;
+      const fileMode = prefersFilePicker();
+      els.pickFolder.textContent = fileMode ? "选择图片" : "选择文件夹";
+      els.pickFolder.title = fileMode ? "当前设备将打开多图片选择。" : "选择包含图片的文件夹。";
+      els.folderInput.toggleAttribute("webkitdirectory", !fileMode);
+      els.folderInput.multiple = true;
+    }
+
+    function buildTypewriterUnits() {
+      cleanupTypewriterUnits();
+      const roots = [els.mainCopy, document.querySelector(".secondary-copy")];
+      const units = [];
+      roots.forEach((root) => wrapTypewriterNode(root, units));
+      state.typewriterUnits = units;
+      return units;
+    }
+
+    function wrapTypewriterNode(node, units) {
+      if (!node) return;
+      if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("image-token")) {
+        node.classList.add("typewriter-unit");
+        node.style.setProperty("--typewriter-opacity", "0");
+        units.push(node);
+        return;
       }
-      return tokens;
-    }
-
-    function getTextTargetRects(target) {
-      const range = document.createRange();
-      range.setStart(target.node, target.start);
-      range.setEnd(target.node, target.end);
-      const rects = Array.from(range.getClientRects());
-      range.detach();
-      return rects;
-    }
-
-    function createTypewriterCover(rect, posterRect, bg) {
-      if (!rect.width || !rect.height) return null;
-      const pad = 1.5;
-      const cover = document.createElement("span");
-      cover.className = "typewriter-cover";
-      cover.style.background = bg;
-      cover.style.left = `${rect.left - posterRect.left - pad}px`;
-      cover.style.top = `${rect.top - posterRect.top - pad}px`;
-      cover.style.width = `${rect.width + pad * 2}px`;
-      cover.style.height = `${rect.height + pad * 2}px`;
-      return cover;
-    }
-
-    function setTypewriterCoverReveal(items, visibleCount) {
-      items.forEach((covers, index) => {
-        const hidden = index < visibleCount;
-        covers.forEach((cover) => {
-          cover.style.opacity = hidden ? "0" : "1";
+      if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("typewriter-unit")) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const fragment = document.createDocumentFragment();
+        tokenizeTypewriterText(node.textContent || "").forEach((token) => {
+          if (/^\s+$/.test(token)) {
+            fragment.appendChild(document.createTextNode(token));
+            return;
+          }
+          const span = document.createElement("span");
+          span.className = "typewriter-unit";
+          span.textContent = token;
+          span.style.setProperty("--typewriter-opacity", "0");
+          fragment.appendChild(span);
+          units.push(span);
         });
+        node.replaceWith(fragment);
+        return;
+      }
+      Array.from(node.childNodes).forEach((child) => wrapTypewriterNode(child, units));
+    }
+
+    function tokenizeTypewriterText(text) {
+      return text.match(/\s+|[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|[^\s]/gu) || [];
+    }
+
+    function setTypewriterUnitReveal(units, visibleCount) {
+      units.forEach((unit, index) => {
+        unit.style.setProperty("--typewriter-opacity", index < visibleCount ? "1" : "0");
       });
     }
 
-    function removeTypewriterCovers() {
-      els.poster.querySelectorAll(".typewriter-cover-layer").forEach((layer) => layer.remove());
-      state.typewriterCoverItems = [];
+    function cleanupTypewriterUnits() {
+      els.poster.querySelectorAll(".image-token.typewriter-unit").forEach((node) => {
+        node.classList.remove("typewriter-unit");
+        node.style.removeProperty("--typewriter-opacity");
+      });
+      els.poster.querySelectorAll("span.typewriter-unit").forEach((node) => {
+        node.replaceWith(document.createTextNode(node.textContent || ""));
+      });
+      els.poster.normalize();
+      state.typewriterUnits = [];
     }
 
     function bindRange(id, outputId, cssName, cssValue) {
@@ -1845,41 +2205,195 @@
       const input = els[id];
       const update = () => setVar(cssName, input.value);
       input.addEventListener("input", update);
+      input.addEventListener("change", update);
       update();
     }
 
+    function getWeightSelect(target) {
+      return target === "cjk" ? els.mainCjkWeight : els.mainLatinWeight;
+    }
+
+    function getFontSelect(target) {
+      return target === "cjk" ? els.mainCjk : els.mainLatin;
+    }
+
+    function getWeightCssName(target) {
+      return target === "cjk" ? "--main-cjk-weight" : "--main-latin-weight";
+    }
+
+    function getWeightLabel(value, target) {
+      if (target === "cjk") return value;
+      const names = {
+        100: "Thin",
+        200: "ExtraLight",
+        300: "Light",
+        400: "Regular",
+        500: "Medium",
+        600: "SemiBold",
+        700: "Bold",
+        800: "ExtraBold",
+        900: "Black"
+      };
+      return names[value] ? `${names[value]} ${value}` : value;
+    }
+
+    function pickClosestWeight(options, preferred) {
+      const preferredNumber = Number(preferred) || 400;
+      return options.reduce((best, option) => {
+        const distance = Math.abs((Number(option.value) || 400) - preferredNumber);
+        const bestDistance = Math.abs((Number(best.value) || 400) - preferredNumber);
+        return distance < bestDistance ? option : best;
+      }, options[0]);
+    }
+
+    function setWeightOptions(target, options, preferredValue) {
+      const select = getWeightSelect(target);
+      const normalized = options.length ? options : defaultWeightOptions[target];
+      const current = preferredValue || select.value || "700";
+      select.replaceChildren();
+      normalized.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.label;
+        select.appendChild(option);
+      });
+      const match = normalized.find((item) => item.value === current) || pickClosestWeight(normalized, current);
+      select.value = match?.value || normalized[0]?.value || "400";
+      setVar(getWeightCssName(target), select.value);
+    }
+
+    function updateFontWeightOptions(target) {
+      const fontValue = getFontSelect(target).value;
+      const customOptions = state.customFontWeights[target].get(fontValue);
+      setWeightOptions(target, customOptions || defaultWeightOptions[target]);
+    }
+
+    function quoteFontFamily(family) {
+      return `"${String(family).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    }
+
+    function normalizeFontFileName(fileName) {
+      return String(fileName || "")
+        .replace(/\.[^.]+$/, "")
+        .replace(/\[[^\]]+\]/g, " ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/[._-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function inferFontFamily(fileName) {
+      const cleaned = normalizeFontFileName(fileName)
+        .replace(/\b(?:thin|hairline|extra\s*light|ultra\s*light|light|regular|book|normal|medium|semi\s*bold|demi\s*bold|bold|extra\s*bold|ultra\s*bold|black|heavy|italic|oblique|roman|variable\s*font|variable|static|vf|wght|opsz|wdth|100|200|300|400|500|600|700|800|900)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned || "Custom Font";
+    }
+
+    function inferFontWeight(fileName) {
+      const name = normalizeFontFileName(fileName);
+      const rules = [
+        ["100", /\b(?:thin|hairline|100)\b/i],
+        ["200", /\b(?:extra\s*light|ultra\s*light|200)\b/i],
+        ["300", /\b(?:light|300)\b/i],
+        ["500", /\b(?:medium|500)\b/i],
+        ["600", /\b(?:semi\s*bold|demi\s*bold|600)\b/i],
+        ["800", /\b(?:extra\s*bold|ultra\s*bold|800)\b/i],
+        ["900", /\b(?:black|heavy|900)\b/i],
+        ["700", /\b(?:bold|700)\b/i],
+        ["400", /\b(?:regular|book|normal|400)\b/i]
+      ];
+      return (rules.find(([, pattern]) => pattern.test(name)) || ["400"])[0];
+    }
+
+    function inferFontStyle(fileName) {
+      return /\b(?:italic|oblique)\b/i.test(normalizeFontFileName(fileName)) ? "italic" : "normal";
+    }
+
+    function appendFontOption(select, label, value) {
+      let option = Array.from(select.options).find((item) => item.value === value);
+      if (!option) {
+        option = document.createElement("option");
+        option.value = value;
+        option.textContent = `自定义 / ${label}`;
+        select.appendChild(option);
+      }
+      return option;
+    }
+
+    function addFontOption(select, label, value) {
+      appendFontOption(select, label, value);
+      select.value = value;
+      select.dispatchEvent(new Event("input", { bubbles: true }));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    async function loadCustomFonts(files, target) {
+      const fontFiles = files.filter((file) => /\.(ttf|otf|woff2?)$/i.test(file.name));
+      if (!fontFiles.length) return;
+      const isCjk = target === "cjk";
+      const button = isCjk ? els.customCjkFontButton : els.customLatinFontButton;
+      const input = isCjk ? els.customCjkFontInput : els.customLatinFontInput;
+      const select = isCjk ? els.mainCjk : els.mainLatin;
+      const fallback = isCjk ? '"Noto Sans SC", sans-serif' : "Inter, sans-serif";
+      if (!("FontFace" in window)) {
+        button.title = "当前浏览器不支持网页字体上传。";
+        return;
+      }
+
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "载入中";
+      try {
+        const loadedFamilies = new Map();
+        const failed = [];
+        for (const file of fontFiles) {
+          const family = inferFontFamily(file.name);
+          const weight = inferFontWeight(file.name);
+          const style = inferFontStyle(file.name);
+          try {
+            const font = new FontFace(family, await file.arrayBuffer(), { weight, style, display: "swap" });
+            await font.load();
+            document.fonts.add(font);
+            if (!loadedFamilies.has(family)) loadedFamilies.set(family, []);
+            loadedFamilies.get(family).push({ weight, style });
+          } catch (error) {
+            failed.push(file.name);
+            console.warn("Font load failed:", file.name, error);
+          }
+        }
+        const loaded = Array.from(loadedFamilies.entries());
+        if (!loaded.length) throw new Error("No valid font files loaded.");
+        loaded.forEach(([family, faces], index) => {
+          const fontValue = `${quoteFontFamily(family)}, ${fallback}`;
+          const weightOptions = Array.from(new Set(faces.map((face) => face.weight)))
+            .sort((a, b) => Number(a) - Number(b))
+            .map((weight) => ({ value: weight, label: getWeightLabel(weight, target) }));
+          state.customFontWeights[target].set(fontValue, weightOptions);
+          if (index === loaded.length - 1) {
+            addFontOption(select, family, fontValue);
+            setWeightOptions(target, weightOptions);
+          } else {
+            appendFontOption(select, family, fontValue);
+          }
+        });
+        button.title = `已载入：${loaded.map(([family, faces]) => `${family}（${faces.length}）`).join(" / ")}${failed.length ? `；${failed.length} 个文件失败` : ""}`;
+      } catch (error) {
+        console.error(error);
+        button.title = "字体载入失败，请尝试 ttf、otf、woff 或 woff2 文件。";
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+        input.value = "";
+      }
+    }
+
     function updateTypographyCalibration() {
-      const rootStyle = getComputedStyle(document.documentElement);
-      const latinFamily = rootStyle.getPropertyValue("--main-latin").trim() || "Inter, Arial, sans-serif";
-      const cjkFamily = rootStyle.getPropertyValue("--main-cjk").trim() || '"Noto Sans SC", sans-serif';
-      const latinWeight = rootStyle.getPropertyValue("--main-latin-weight").trim() || "700";
-      const cjkWeight = rootStyle.getPropertyValue("--main-cjk-weight").trim() || "700";
-      const size = 120;
-      const latin = measureFontBox(`${latinWeight} ${size}px ${latinFamily}`, "English Hpx");
-      const cjk = measureFontBox(`${cjkWeight} ${size}px ${cjkFamily}`, "汉字排版");
-      if (!latin || !cjk) return;
-
-      const latinHeight = latin.ascent + latin.descent;
-      const cjkHeight = cjk.ascent + cjk.descent;
-      const scale = Math.max(0.82, Math.min(0.98, (latinHeight / cjkHeight) * 0.98));
-      const latinCenter = (-latin.ascent + latin.descent) / 2;
-      const cjkCenter = (-cjk.ascent * scale + cjk.descent * scale) / 2;
-      const shift = Math.max(-0.12, Math.min(0.12, (latinCenter - cjkCenter) / size));
-
-      setVar("--cjk-size-scale", `${scale.toFixed(3)}em`);
-      setVar("--cjk-baseline-shift", `${shift.toFixed(3)}em`);
+      setVar("--cjk-size-scale", "0.88em");
+      setVar("--cjk-baseline-shift", "-0.055em");
     }
 
-    function measureFontBox(font, text) {
-      const canvas = measureFontBox.canvas || (measureFontBox.canvas = document.createElement("canvas"));
-      const ctx = canvas.getContext("2d");
-      ctx.font = font;
-      const metrics = ctx.measureText(text);
-      const ascent = metrics.actualBoundingBoxAscent;
-      const descent = metrics.actualBoundingBoxDescent;
-      if (!Number.isFinite(ascent) || !Number.isFinite(descent) || ascent + descent <= 0) return null;
-      return { ascent, descent };
-    }
+    updateTypographyCalibration();
 
     function normalizeHex(value, fallback = "#111111") {
       const raw = String(value || "").trim();
@@ -1936,6 +2450,23 @@
       });
       updateRandomColorIcon(randomButton, randomIconFront, randomIconBack);
       apply(colorInput.value);
+    }
+
+    function setControlPanel(panel, toggle, open) {
+      panel.classList.toggle("is-open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+    }
+
+    function bindControlPanel(panelId, toggleId, { onOpen = null } = {}) {
+      const panel = els[panelId];
+      const toggle = els[toggleId];
+      if (!panel || !toggle) return;
+      toggle.addEventListener("click", () => {
+        const open = !panel.classList.contains("is-open");
+        if (open && onOpen) onOpen();
+        setControlPanel(panel, toggle, open);
+      });
+      setControlPanel(panel, toggle, false);
     }
 
     function bindStrokeControl() {
@@ -2006,7 +2537,7 @@
     }
 
     function shouldAutoCollapseSidebar() {
-      return window.innerWidth <= 980;
+      return window.innerWidth <= 980 || (state.touchDevice && window.innerWidth <= 1180);
     }
 
     function applySidebarState() {
@@ -2073,6 +2604,7 @@
         els.canvasHeightDock.value = Math.round(width / ratio);
       }
       setVar("--poster-ratio", ratio);
+      els.poster.style.aspectRatio = String(ratio);
       updateCanvasFit();
       updateExportSize();
     }
@@ -2118,8 +2650,30 @@
       els.footerOne.value = defaults.footerOne;
       els.footerTwo.value = defaults.footerTwo;
       els.footerThree.value = defaults.footerThree;
+      state.footerVisible = true;
+      updateFooterVisibility();
       renderMain();
       renderFooter();
+    }
+
+    function updateFooterVisibility() {
+      els.poster.classList.toggle("footer-hidden", !state.footerVisible);
+      els.footerVisibilityToggle.classList.toggle("is-active", state.footerVisible);
+      els.footerVisibilityToggle.setAttribute("aria-pressed", String(state.footerVisible));
+      els.footerTextFields.hidden = !state.footerVisible;
+      els.secondaryTextControls.classList.toggle("is-disabled", !state.footerVisible);
+      els.secondaryTextControls.setAttribute("aria-disabled", String(!state.footerVisible));
+      [els.footerTextFields, els.secondaryTextControls].forEach((root) => {
+        root.querySelectorAll("input, select, textarea, button").forEach((control) => {
+          control.disabled = !state.footerVisible;
+        });
+      });
+      if (!state.footerVisible) {
+        els.secondaryTextControls.querySelectorAll("details").forEach((details) => {
+          details.open = false;
+        });
+        setControlPanel(els.secondaryColorPanel, els.secondaryColorToggle, false);
+      }
     }
 
     function resetDefaults() {
@@ -2140,7 +2694,10 @@
       state.resetting = false;
       state.randomLetter = false;
       state.exportScale = 1;
+      state.footerVisible = true;
       state.seed = Date.now();
+      setWeightOptions("latin", defaultWeightOptions.latin, "700");
+      setWeightOptions("cjk", defaultWeightOptions.cjk, "700");
       els.randomLetters.textContent = "随机字母大小";
       els.randomLetters.classList.remove("is-active");
       els.mainStrokeWidth.value = els.mainStrokeWidth.defaultValue;
@@ -2150,10 +2707,13 @@
       setVar("--main-latin-stroke", "0px");
       setVar("--main-cjk-stroke", "0px");
       setVar("--main-stroke-color", els.mainStrokeColor.defaultValue);
+      setControlPanel(els.mainColorPanel, els.mainColorToggle, false);
+      setControlPanel(els.mainStrokePanel, els.mainStrokeToggle, false);
+      setControlPanel(els.secondaryColorPanel, els.secondaryColorToggle, false);
       document.querySelectorAll("[data-export-scale]").forEach((button) => {
         button.classList.toggle("is-active", button.dataset.exportScale === "1");
       });
-      setUiTheme("light");
+      setUiTheme("dark");
       applyDefaults();
       syncCanvasMetrics();
     }
@@ -2173,17 +2733,18 @@
     bindSelect("mainCjkWeight", "--main-cjk-weight");
     bindSelect("mainLatin", "--main-latin");
     bindSelect("mainCjk", "--main-cjk");
-    [els.mainLatinWeight, els.mainCjkWeight, els.mainLatin, els.mainCjk].forEach((control) => {
-      control.addEventListener("input", updateTypographyCalibration);
-      control.addEventListener("change", updateTypographyCalibration);
-    });
-    updateTypographyCalibration();
-    if (document.fonts?.ready) document.fonts.ready.then(updateTypographyCalibration);
+    els.mainLatin.addEventListener("input", () => updateFontWeightOptions("latin"));
+    els.mainCjk.addEventListener("input", () => updateFontWeightOptions("cjk"));
+    els.mainLatin.addEventListener("change", () => updateFontWeightOptions("latin"));
+    els.mainCjk.addEventListener("change", () => updateFontWeightOptions("cjk"));
     bindColorControl({ colorId: "posterBg", hexId: "posterBgHex", modeId: "posterBgMode", randomId: "randomPosterBg", cssName: "--poster-bg", lightRandom: true });
     bindColorControl({ colorId: "mainColor", hexId: "mainColorHex", modeId: "mainColorMode", randomId: "randomMainColor", cssName: "--main-color" });
     bindColorControl({ colorId: "mainStrokeColor", hexId: "mainStrokeColorHex", modeId: "mainStrokeColorMode", randomId: "randomMainStrokeColor", cssName: "--main-stroke-color", onButtonUse: enableMainStroke });
     bindColorControl({ colorId: "secondaryColor", hexId: "secondaryColorHex", modeId: "secondaryColorMode", randomId: "randomSecondaryColor", cssName: "--secondary-color" });
     bindStrokeControl();
+    bindControlPanel("mainColorPanel", "mainColorToggle");
+    bindControlPanel("mainStrokePanel", "mainStrokeToggle");
+    bindControlPanel("secondaryColorPanel", "secondaryColorToggle");
     bindAlignment("main", "--main-align");
     bindAlignment("secondary", "--secondary-align");
     bindExportScale();
@@ -2204,7 +2765,28 @@
       applySidebarState();
     });
     els.resetDefaults.addEventListener("click", resetDefaults);
-    setUiTheme("light");
+    els.typeSettingsPanel.addEventListener("toggle", () => {
+      if (els.typeSettingsPanel.open) els.mainTypographyAdvanced.open = true;
+    });
+    els.customLatinFontButton.addEventListener("click", () => {
+      els.customLatinFontInput.click();
+    });
+    els.customCjkFontButton.addEventListener("click", () => {
+      els.customCjkFontInput.click();
+    });
+    els.customLatinFontInput.addEventListener("change", () => {
+      loadCustomFonts(Array.from(els.customLatinFontInput.files || []), "latin");
+    });
+    els.customCjkFontInput.addEventListener("change", () => {
+      loadCustomFonts(Array.from(els.customCjkFontInput.files || []), "cjk");
+    });
+    els.footerVisibilityToggle.addEventListener("click", () => {
+      state.footerVisible = !state.footerVisible;
+      updateFooterVisibility();
+    });
+    document.addEventListener("pointerdown", handleControlInteraction, true);
+    document.addEventListener("keydown", handleControlInteraction, true);
+    setUiTheme("dark");
 
     els.canvasWidth.addEventListener("input", updateCanvasFit);
     els.canvasWidthValue.addEventListener("change", updateCanvasFit);
@@ -2222,7 +2804,14 @@
     els.mainText.addEventListener("input", renderMain);
     [els.footerOne, els.footerTwo, els.footerThree].forEach((textarea) => textarea.addEventListener("input", renderFooter));
 
-    window.addEventListener("resize", applySidebarState);
+    window.addEventListener("resize", () => {
+      updateViewportMetrics();
+      applySidebarState();
+    });
+    window.visualViewport?.addEventListener("resize", () => {
+      updateViewportMetrics();
+      applySidebarState();
+    });
 
     els.randomLetters.addEventListener("click", () => {
       state.randomLetter = !state.randomLetter;
@@ -2247,7 +2836,7 @@
     els.randomRemoveBg.addEventListener("change", renderMain);
 
     els.pickFolder.addEventListener("click", async () => {
-      if ("showDirectoryPicker" in window) {
+      if (!prefersFilePicker() && "showDirectoryPicker" in window) {
         try {
           const dir = await window.showDirectoryPicker();
           const files = await collectDirectoryImages(dir);
@@ -2262,7 +2851,7 @@
 
     els.folderInput.addEventListener("change", async () => {
       const files = Array.from(els.folderInput.files || []);
-      const firstPath = files[0]?.webkitRelativePath?.split("/")[0] || "已选文件夹";
+      const firstPath = files[0]?.webkitRelativePath?.split("/")[0] || (prefersFilePicker() ? "已选图片" : "已选文件夹");
       await loadImages(files, firstPath);
     });
 
@@ -2465,6 +3054,30 @@
       return await renderPosterCanvasManual();
     }
 
+    async function renderStaticPosterCanvas() {
+      const shouldRestoreTypewriter = Boolean(els.typewriterToggle?.checked);
+      clearTypewriterTimer();
+      if (shouldRestoreTypewriter) {
+        if (!state.typewriterUnits.length) buildTypewriterUnits();
+        setTypewriterUnitReveal(state.typewriterUnits, state.typewriterUnits.length);
+      }
+      try {
+        await waitForLayoutFrame();
+        return await renderPosterCanvas();
+      } finally {
+        if (shouldRestoreTypewriter) {
+          els.typewriterToggle.checked = true;
+          completeTypewriter();
+        }
+      }
+    }
+
+    function waitForLayoutFrame() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+    }
+
     async function renderPosterCanvasManual() {
       await waitForPosterAssets();
 
@@ -2481,7 +3094,6 @@
       ctx.fillRect(0, 0, width, height);
       await drawPosterNode(ctx, els.poster, posterRect, correction);
       drawSecondaryCopy(ctx, posterRect, correction);
-      drawTypewriterCovers(ctx, posterRect, correction);
       return { canvas, width: canvas.width, height: canvas.height };
     }
 
@@ -2502,6 +3114,8 @@
       for (const node of nodes) {
         if (node.nodeType === Node.TEXT_NODE) {
           drawTextNode(ctx, node, posterRect, correction);
+        } else if (node.classList?.contains("image-token")) {
+          await drawImageToken(ctx, node, posterRect, correction);
         } else if (node.tagName === "IMG") {
           await drawContainImage(ctx, node, posterRect, correction);
         } else if (node.classList?.contains("empty-image")) {
@@ -2516,9 +3130,12 @@
         acceptNode(node) {
           if (node.nodeType === Node.TEXT_NODE) {
             if (node.parentElement?.closest(".secondary-copy")) return NodeFilter.FILTER_REJECT;
+            if (node.parentElement?.closest(".image-token")) return NodeFilter.FILTER_REJECT;
             return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
           }
           if (node.closest?.(".secondary-copy")) return NodeFilter.FILTER_REJECT;
+          if (node.classList?.contains("image-token")) return NodeFilter.FILTER_ACCEPT;
+          if (node.closest?.(".image-token")) return NodeFilter.FILTER_REJECT;
           if (node.tagName === "IMG" || node.classList?.contains("empty-image")) {
             return NodeFilter.FILTER_ACCEPT;
           }
@@ -2546,34 +3163,74 @@
       ctx.textBaseline = "alphabetic";
       const strokeWidth = parseFloat(style.getPropertyValue("-webkit-text-stroke-width")) || 0;
       const range = document.createRange();
-      for (let i = 0; i < text.length; i += 1) {
-        const char = text[i];
-        if (!char.trim()) continue;
-        const metrics = ctx.measureText(char);
-        const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : scaledFontSize * 0.72;
-        const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : scaledFontSize * 0.22;
-        range.setStart(textNode, i);
-        range.setEnd(textNode, i + 1);
-        const rects = Array.from(range.getClientRects());
+      splitTextNodeByDrawableRuns(text).forEach((segment) => {
+        const segmentText = text.slice(segment.start, segment.end);
+        if (!segmentText || /^\s+$/.test(segmentText)) return;
+        const rects = getRangeRects(range, textNode, segment.start, segment.end);
         rects.forEach((rect) => {
           if (!rect.width && !rect.height) return;
           const x = (rect.left - posterRect.left) * correction;
-          const y = (rect.top - posterRect.top) * correction + (rect.height * correction + ascent - descent) / 2;
-          if (strokeWidth > 0) {
-            ctx.lineWidth = strokeWidth * correction;
-            ctx.strokeStyle = style.webkitTextStrokeColor || style.color;
-            ctx.lineJoin = "round";
-            ctx.strokeText(char, x, y);
-          }
-          ctx.fillText(char, x, y);
+          const y = getCanvasTextBaseline(ctx, rect, posterRect, correction, scaledFontSize);
+          drawCanvasTextWithSpacing(ctx, segmentText, x, y, style, scaledFontSize, strokeWidth, correction);
         });
-      }
+      });
       range.detach();
       ctx.restore();
     }
 
+    function splitTextNodeByDrawableRuns(text) {
+      const runs = [];
+      const pattern = /\s+|[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[^\s]/gu;
+      let match;
+      while ((match = pattern.exec(text || ""))) {
+        const value = match[0];
+        runs.push({ start: match.index, end: match.index + value.length });
+      }
+      return runs;
+    }
+
+    function getRangeRects(range, node, start, end) {
+      range.setStart(node, start);
+      range.setEnd(node, end);
+      return Array.from(range.getClientRects()).filter((rect) => rect.width || rect.height);
+    }
+
+    function getCanvasTextBaseline(ctx, rect, posterRect, correction, fontSize) {
+      const metrics = ctx.measureText("Hgjpqy");
+      const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.22;
+      return (rect.bottom - posterRect.top) * correction - descent;
+    }
+
+    function drawCanvasTextWithSpacing(ctx, text, x, y, style, fontSize, strokeWidth, correction) {
+      const letterSpacing = (parseFloat(style.letterSpacing) || 0) * correction;
+      if (Math.abs(letterSpacing) < 0.001) {
+        if (strokeWidth > 0) {
+          ctx.lineWidth = strokeWidth * correction;
+          ctx.strokeStyle = style.webkitTextStrokeColor || style.color;
+          ctx.lineJoin = "round";
+          ctx.strokeText(text, x, y);
+        }
+        ctx.fillText(text, x, y);
+        return;
+      }
+      let cursor = x;
+      for (const char of text) {
+        if (char) {
+          if (strokeWidth > 0) {
+            ctx.lineWidth = strokeWidth * correction;
+            ctx.strokeStyle = style.webkitTextStrokeColor || style.color;
+            ctx.lineJoin = "round";
+            ctx.strokeText(char, cursor, y);
+          }
+          ctx.fillText(char, cursor, y);
+          cursor += ctx.measureText(char).width + letterSpacing;
+        }
+      }
+    }
+
     function drawSecondaryCopy(ctx, posterRect, correction) {
       const footer = document.querySelector(".secondary-copy");
+      if (!state.footerVisible || getComputedStyle(footer).display === "none") return;
       const style = getComputedStyle(footer);
       const columns = [
         { node: els.footerOneOut, source: els.footerOne.value },
@@ -2598,9 +3255,10 @@
       const fontSize = (parseFloat(style.fontSize) || 12) * correction;
       const lineHeight = fontSize * (parseFloat(style.lineHeight) / (parseFloat(style.fontSize) || 12) || 1.12);
       const letterSpacing = (parseFloat(style.letterSpacing) || 0) * correction;
-      const align = style.textAlign || "left";
+      const align = nodeStyle.textAlign || style.textAlign || "left";
       let cursorY = y + getCanvasBaseline(ctx, fontSize, style.fontWeight, style.fontFamily);
-      String(text || "").split(/\n/).forEach((paragraph, paragraphIndex) => {
+      const paragraphs = String(text || "").split(/\n/);
+      paragraphs.forEach((paragraph, paragraphIndex) => {
         const lines = wrapSecondaryLine(ctx, paragraph, width, fontSize, style, letterSpacing);
         lines.forEach((line) => {
           const lineWidth = measureRuns(ctx, line, fontSize, style, letterSpacing);
@@ -2608,7 +3266,7 @@
           drawRuns(ctx, line, x + Math.max(0, offset), cursorY, fontSize, style, letterSpacing);
           cursorY += lineHeight;
         });
-        if (paragraphIndex < String(text || "").split(/\n/).length - 1) cursorY += lineHeight * 0.08;
+        if (paragraphIndex < paragraphs.length - 1) cursorY += lineHeight * 0.08;
       });
     }
 
@@ -2635,6 +3293,10 @@
       let match;
       while ((match = pattern.exec(text || ""))) {
         const value = match[0];
+        if (/^[、，。；：！？,.!?;:%)]$/.test(value) && tokens.length && !/^\s+$/.test(tokens[tokens.length - 1].value)) {
+          tokens[tokens.length - 1].value += value;
+          continue;
+        }
         tokens.push({ value, cjk: /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(value) });
       }
       return tokens;
@@ -2678,6 +3340,67 @@
       const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fontSize * 0.75;
       const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.2;
       return (fontSize + ascent - descent) / 2;
+    }
+
+    async function drawImageToken(ctx, node, posterRect, correction) {
+      const opacity = getEffectiveOpacity(node);
+      if (opacity <= 0.01) return;
+      const tokenRect = node.getBoundingClientRect();
+      const lineStyle = getComputedStyle(node.parentElement || node);
+      const lineFontSize = (parseFloat(lineStyle.fontSize) || 16) * correction;
+      const baseline = getLineBaseline(ctx, tokenRect, posterRect, correction, lineFontSize, lineStyle);
+      for (const child of Array.from(node.children)) {
+        if (child.classList?.contains("paren")) {
+          drawElementText(ctx, child, posterRect, correction, opacity, baseline);
+        } else if (child.classList?.contains("empty-image")) {
+          drawEmptyImage(ctx, child, posterRect, correction);
+        } else if (child.classList?.contains("inline-image")) {
+          const img = child.querySelector("img");
+          if (img) await drawContainImage(ctx, img, posterRect, correction);
+        }
+      }
+    }
+
+    function getLineBaseline(ctx, rect, posterRect, correction, fontSize, style) {
+      ctx.save();
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      const baseline = getCanvasTextBaseline(ctx, rect, posterRect, correction, fontSize);
+      ctx.restore();
+      return baseline;
+    }
+
+    function drawElementText(ctx, node, posterRect, correction, parentOpacity = 1, forcedBaseline = null) {
+      const text = node.textContent || "";
+      if (!text) return;
+      const rect = node.getBoundingClientRect();
+      if (!rect.width && !rect.height) return;
+      const style = getComputedStyle(node);
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const scaledFontSize = fontSize * correction;
+      const opacity = parentOpacity * getOwnOpacity(node);
+      if (opacity <= 0.01) return;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = style.color;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${scaledFontSize}px ${style.fontFamily}`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      const x = (rect.left - posterRect.left) * correction;
+      const y = Number.isFinite(forcedBaseline)
+        ? forcedBaseline
+        : getCanvasElementBaseline(ctx, rect, posterRect, correction, scaledFontSize);
+      drawCanvasTextWithSpacing(ctx, text, x, y, style, scaledFontSize, 0, correction);
+      ctx.restore();
+    }
+
+    function getCanvasElementBaseline(ctx, rect, posterRect, correction, fontSize) {
+      if (rect.height < 1) return (rect.bottom - posterRect.top) * correction;
+      return getCanvasTextBaseline(ctx, rect, posterRect, correction, fontSize);
+    }
+
+    function getOwnOpacity(node) {
+      const value = Number(getComputedStyle(node).opacity);
+      return Number.isFinite(value) ? value : 1;
     }
 
     async function drawContainImage(ctx, img, posterRect, correction) {
@@ -2746,30 +3469,10 @@
       return opacity;
     }
 
-    function drawTypewriterCovers(ctx, posterRect, correction) {
-      const covers = Array.from(els.poster.querySelectorAll(".typewriter-cover"));
-      covers.forEach((cover) => {
-        const opacity = getEffectiveOpacity(cover);
-        if (opacity <= 0.01) return;
-        const rect = cover.getBoundingClientRect();
-        const style = getComputedStyle(cover);
-        ctx.save();
-        ctx.globalAlpha = opacity;
-        ctx.fillStyle = style.backgroundColor;
-        ctx.fillRect(
-          (rect.left - posterRect.left) * correction,
-          (rect.top - posterRect.top) * correction,
-          rect.width * correction,
-          rect.height * correction
-        );
-        ctx.restore();
-      });
-    }
-
     async function exportPosterPng() {
       els.exportStatus.textContent = "正在生成 PNG。";
       try {
-        const { canvas } = await renderPosterCanvas();
+        const { canvas } = await renderStaticPosterCanvas();
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
         if (!blob) throw new Error("empty canvas");
         downloadBlob(blob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.png`);
@@ -2783,7 +3486,7 @@
     async function exportPosterPdf() {
       els.exportStatus.textContent = "正在生成 PDF。";
       try {
-        const rendered = await renderPosterCanvas();
+        const rendered = await renderStaticPosterCanvas();
         const jpegBlob = await new Promise((resolve) => rendered.canvas.toBlob(resolve, "image/jpeg", 0.96));
         if (!jpegBlob) throw new Error("empty jpeg");
         const pdfBlob = await makePdfFromJpeg(jpegBlob, rendered.canvas.width, rendered.canvas.height, rendered.width, rendered.height);
@@ -2812,14 +3515,24 @@
       const frameCount = Math.max(2, Math.ceil(seconds * fps));
       const wasChecked = els.typewriterToggle.checked;
       let stream;
+      const restoreTypewriterState = () => {
+        if (wasChecked) {
+          completeTypewriter();
+          els.typewriterToggle.checked = true;
+        } else {
+          els.typewriterToggle.checked = false;
+          disableTypewriter();
+        }
+      };
 
       els.exportStatus.textContent = isMp4 ? "正在录制 MP4 动画。" : "当前浏览器不支持 MP4 编码，正在录制 WebM 动画。";
       try {
         clearTypewriterTimer();
-        removeTypewriterCovers();
+        cleanupTypewriterUnits();
         els.typewriterToggle.checked = true;
-        const coverItems = buildTypewriterCovers();
-        const unitCount = coverItems.length;
+        const typewriterUnits = buildTypewriterUnits();
+        const unitCount = typewriterUnits.length;
+        setTypewriterUnitReveal(typewriterUnits, 0);
 
         const firstFrame = await renderPosterCanvas();
         const videoCanvas = document.createElement("canvas");
@@ -2841,7 +3554,7 @@
         stream.getVideoTracks()[0]?.requestFrame?.();
         for (let frame = 0; frame <= frameCount; frame += 1) {
           const visibleCount = Math.ceil((frame / frameCount) * unitCount);
-          setTypewriterCoverReveal(coverItems, visibleCount);
+          setTypewriterUnitReveal(typewriterUnits, visibleCount);
           const rendered = await renderPosterCanvas();
           videoCtx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
           videoCtx.drawImage(rendered.canvas, 0, 0);
@@ -2852,21 +3565,18 @@
           await wait(1000 / fps);
         }
 
-        setTypewriterCoverReveal(coverItems, unitCount);
+        setTypewriterUnitReveal(typewriterUnits, unitCount);
+        const finalRendered = await renderPosterCanvas();
+        videoCtx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+        videoCtx.drawImage(finalRendered.canvas, 0, 0);
+        stream.getVideoTracks()[0]?.requestFrame?.();
         await wait(180);
         if (recorder.state === "recording" && recorder.requestData) recorder.requestData();
         recorder.stop();
         await stopped;
         stream.getTracks().forEach((track) => track.stop());
         stream = null;
-        removeTypewriterCovers();
-        if (wasChecked) {
-          completeTypewriter();
-          els.typewriterToggle.checked = true;
-        } else {
-          els.typewriterToggle.checked = false;
-          disableTypewriter();
-        }
+        restoreTypewriterState();
 
         const blob = new Blob(chunks, { type: mimeType });
         if (blob.size < 1024) throw new Error("empty video");
@@ -2877,13 +3587,7 @@
         console.error(error);
         els.exportStatus.textContent = `视频导出失败：${getErrorMessage(error)}`;
         if (stream) stream.getTracks().forEach((track) => track.stop());
-        if (wasChecked) {
-          els.typewriterToggle.checked = true;
-          completeTypewriter();
-        } else {
-          els.typewriterToggle.checked = false;
-          disableTypewriter();
-        }
+        restoreTypewriterState();
       }
     }
 
@@ -2891,6 +3595,7 @@
       const message = String(error?.message || error || "未知错误");
       if (/tainted/i.test(message)) return "浏览器安全策略阻止画布导出，已切换到安全渲染路径后请重试。";
       if (/empty video/i.test(message)) return "视频编码器没有生成有效数据，请换用最新版 Edge 或 Chrome。";
+      if (/not supported|not allowed|mime|codec/i.test(message)) return "当前浏览器不支持这个导出能力，请换用最新版 Chrome 或 Edge。";
       return message.length > 64 ? `${message.slice(0, 64)}...` : message;
     }
 
@@ -2910,6 +3615,11 @@
 
     function downloadBlob(blob, filename) {
       const url = URL.createObjectURL(blob);
+      if (!("download" in HTMLAnchorElement.prototype)) {
+        window.open(url, "_blank", "noopener");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+      }
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
@@ -2993,6 +3703,7 @@
       });
     }
 
+    updateViewportMetrics();
     applyDefaults();
     applySidebarState();
     bindCanvasPan();
