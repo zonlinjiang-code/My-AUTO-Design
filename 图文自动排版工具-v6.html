@@ -1,0 +1,3712 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图文自动排版工具</title>
+  <style>
+    :root {
+      --ui-bg: #111519;
+      --stage-bg: #151a1f;
+      --stage-grid: rgba(120, 132, 146, 0.18);
+      --panel: #171c21;
+      --panel-2: #20262d;
+      --panel-3: #262d34;
+      --field-bg: #101418;
+      --field-bg-strong: #0b0e11;
+      --ink: #edf0e8;
+      --muted: #899098;
+      --line: #313840;
+      --line-strong: #4a525b;
+      --accent: #f3a31a;
+      --accent-2: #ffd35a;
+      --accent-ink: #18120a;
+      --accent-focus: rgba(243, 163, 26, 0.24);
+      --accent-soft: rgba(243, 163, 26, 0.16);
+      --dock-bg: rgba(23, 28, 33, 0.9);
+      --shadow: rgba(0, 0, 0, 0.34);
+      --app-height: 100vh;
+      --canvas-fit-w: 720px;
+      --poster-bg: #fffefa;
+      --main-color: #1ab79a;
+      --secondary-color: #111111;
+      --poster-pad: 3.8%;
+      --main-size: 30px;
+      --main-latin-weight: 700;
+      --main-cjk-weight: 700;
+      --main-latin-stroke: 0px;
+      --main-cjk-stroke: 0px;
+      --cjk-size-scale: 0.88em;
+      --cjk-baseline-shift: -0.055em;
+      --main-tracking: 0em;
+      --main-leading: 1;
+      --main-align: left;
+      --secondary-size: 10px;
+      --secondary-tracking: 0em;
+      --secondary-leading: 1.12;
+      --secondary-align: left;
+      --main-stroke-color: #ffffff;
+      --image-scale: 1.18;
+      --image-shift: -0.12em;
+      --main-latin: Inter, sans-serif;
+      --main-cjk: "Noto Sans SC", sans-serif;
+    }
+
+    body[data-ui-theme="light"] {
+      --ui-bg: #eceee8;
+      --stage-bg: #f3f2ec;
+      --stage-grid: rgba(203, 205, 198, 0.38);
+      --panel: #f8f9f5;
+      --panel-2: #eef0eb;
+      --panel-3: #e3e6df;
+      --field-bg: #ffffff;
+      --field-bg-strong: #fbfcf8;
+      --ink: #151712;
+      --muted: #676d64;
+      --line: #cfd4cc;
+      --line-strong: #aeb7aa;
+      --accent: #e69112;
+      --accent-2: #ffbe30;
+      --accent-ink: #17120a;
+      --accent-focus: rgba(230, 145, 18, 0.22);
+      --accent-soft: rgba(230, 145, 18, 0.14);
+      --dock-bg: rgba(255, 255, 255, 0.92);
+      --shadow: rgba(28, 33, 24, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: var(--app-height);
+      background: var(--ui-bg);
+      color: var(--ink);
+      font-family: Inter, "Noto Sans SC", sans-serif;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font-family: inherit;
+    }
+
+    .app {
+      --sidebar-width: 338px;
+      --sidebar-offset: var(--sidebar-width);
+      display: grid;
+      grid-template-columns: var(--sidebar-offset) minmax(0, 1fr);
+      min-height: var(--app-height);
+      transition: grid-template-columns 180ms ease;
+    }
+
+    .app.sidebar-collapsed {
+      --sidebar-offset: 0px;
+    }
+
+    .sidebar {
+      grid-column: 1;
+      width: var(--sidebar-width);
+      height: var(--app-height);
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 12px 18px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+      scrollbar-color: var(--line-strong) transparent;
+      transition: transform 180ms ease;
+      z-index: 40;
+    }
+
+    .app.sidebar-collapsed .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      max-width: min(var(--sidebar-width), calc(100vw - 18px));
+      transform: translateX(-100%);
+      pointer-events: none;
+    }
+
+    .app.sidebar-collapsed.sidebar-overlay-open .sidebar {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .app.sidebar-collapsed.sidebar-overlay-open .sidebar-backdrop {
+      display: block;
+    }
+
+    .app-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin: 0 0 14px;
+      padding: 8px 0 13px;
+      border-bottom: 1px solid var(--line);
+      user-select: none;
+      caret-color: transparent;
+    }
+
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .app-title {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+      gap: 10px;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+      caret-color: transparent;
+    }
+
+    .app-title::before {
+      content: "✦";
+      color: #ffffff;
+      font-size: 18px;
+      line-height: 1;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.28);
+    }
+
+    body[data-ui-theme="light"] .app-title::before {
+      color: #111111;
+      text-shadow: none;
+    }
+
+    .reset-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: auto;
+      min-width: 74px;
+      min-height: 34px;
+      padding: 7px 11px;
+      border-color: var(--line);
+      border-radius: 9px;
+      background: var(--field-bg-strong);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .reset-button::before {
+      content: "↻";
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .toolbar-toggle {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      min-height: 30px;
+      padding: 0;
+      border-color: var(--line);
+      border-radius: 8px;
+      background: var(--field-bg-strong);
+      color: var(--ink);
+      user-select: none;
+      caret-color: transparent;
+    }
+
+    .toolbar-toggle::before {
+      content: none;
+    }
+
+    .toolbar-toggle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-left: 2.6px solid currentColor;
+      border-bottom: 2.6px solid currentColor;
+      border-radius: 1px;
+      opacity: 0.86;
+      transform: translate(-35%, -50%) rotate(45deg);
+    }
+
+    .toolbar-float-toggle::after {
+      transform: translate(-65%, -50%) rotate(-135deg);
+    }
+
+    .toolbar-float-toggle {
+      display: none;
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      z-index: 35;
+      background: var(--dock-bg);
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+
+    .app.sidebar-collapsed:not(.sidebar-overlay-open) .toolbar-float-toggle {
+      display: inline-grid;
+    }
+
+    .section {
+      padding: 0;
+      border-top: 0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .section-panel {
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+    .section:first-of-type .section-panel {
+      border-top: 0;
+    }
+
+    .section-panel > summary {
+      min-height: 50px;
+      padding: 12px 4px;
+      cursor: pointer;
+      list-style: none;
+      background: transparent;
+    }
+
+    .section-panel > summary.section-title {
+      margin-bottom: 0;
+    }
+
+    .section-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .section-panel > summary::after {
+      content: "▶";
+      margin-left: auto;
+      font-size: 7px;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .section-panel[open] > summary::after {
+      content: "▼";
+    }
+
+    .section-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: rgba(230, 145, 18, 0.34);
+      color: var(--accent-2);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .section-name {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: none;
+    }
+
+    .section-body {
+      padding: 2px 10px 11px;
+    }
+
+    label,
+    .field {
+      display: grid;
+      gap: 5px;
+      margin: 8px 0;
+      font-size: 11px;
+      font-weight: 760;
+      color: var(--muted);
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .font-upload-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 32px;
+      margin: 0;
+      border-color: var(--line-strong);
+      border-radius: 6px;
+      background: var(--panel-3);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .font-upload-button::before {
+      content: "↑";
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .color-field,
+    .stroke-field {
+      display: grid;
+      gap: 7px;
+      margin: 8px 0;
+      min-width: 0;
+      font-size: 11px;
+      font-weight: 760;
+      color: var(--muted);
+    }
+
+    .control-toggle {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) 10px;
+      gap: 7px;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 7px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-align: left;
+    }
+
+    .control-toggle:hover,
+    .control-toggle[aria-expanded="true"] {
+      border-color: var(--line-strong);
+      background: var(--field-bg-strong);
+      color: var(--ink);
+    }
+
+    .control-toggle::after {
+      content: "";
+      justify-self: end;
+      width: 5px;
+      height: 5px;
+      border-right: 1.6px solid currentColor;
+      border-bottom: 1.6px solid currentColor;
+      transform: rotate(45deg);
+      transition: transform 0.16s ease;
+    }
+
+    .control-toggle[aria-expanded="true"]::after {
+      transform: rotate(-135deg) translate(-1px, -1px);
+    }
+
+    .control-icon {
+      position: relative;
+      display: inline-grid;
+      width: 16px;
+      height: 16px;
+      place-items: center;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .control-icon.color-icon::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--main-color);
+    }
+
+    .control-icon.stroke-icon::before {
+      content: "";
+      width: 14px;
+      height: 12px;
+      background:
+        linear-gradient(currentColor, currentColor) 2px 0 / 2px 100% no-repeat,
+        linear-gradient(currentColor, currentColor) 6px 0 / 2px 100% no-repeat,
+        linear-gradient(currentColor, currentColor) 10px 0 / 2px 100% no-repeat;
+      opacity: 0.9;
+    }
+
+    .control-panel {
+      display: none;
+      gap: 7px;
+      min-width: 0;
+      padding-right: 4px;
+    }
+
+    .color-field.is-open .control-panel,
+    .stroke-field.is-open .control-panel {
+      display: grid;
+    }
+
+    .color-control {
+      display: grid;
+      grid-template-columns: minmax(0, 72px) minmax(0, 1fr) minmax(0, 72px);
+      gap: 7px;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .color-mode,
+    .color-random {
+      min-height: 34px;
+      border-radius: 8px;
+      background: var(--panel-3);
+      color: var(--ink);
+    }
+
+    .color-mode,
+    .color-random {
+      position: relative;
+      min-width: 0;
+      border-color: var(--line);
+      font-size: 12px;
+      overflow: hidden;
+      padding-inline: 5px;
+    }
+
+    .color-mode::before,
+    .color-mode::after,
+    .color-random::before,
+    .color-random::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border: 0;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      transition: background 0.16s ease;
+    }
+
+    .color-mode::before,
+    .color-random::before {
+      left: 6px;
+      background: var(--color-back, #050505);
+      z-index: 1;
+    }
+
+    .color-mode::after,
+    .color-random::after {
+      left: 12px;
+      width: 15px;
+      height: 15px;
+      background: var(--color-front, #ffffff);
+      z-index: 2;
+    }
+
+    .color-mode span,
+    .color-random span {
+      display: block;
+      padding-left: 26px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .color-value {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 5px;
+      align-items: center;
+      min-height: 34px;
+      min-width: 0;
+      padding: 4px 6px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--field-bg-strong);
+    }
+
+    .color-value input[type="color"] {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+    }
+
+    .color-hex {
+      min-height: 24px;
+      min-width: 0;
+      padding: 2px 2px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: lowercase;
+    }
+
+    .stroke-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 82px;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 82px;
+      gap: 9px;
+      align-items: center;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--field-bg);
+      color: var(--ink);
+      font: inherit;
+      letter-spacing: 0;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus,
+    button:focus-visible {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-focus);
+    }
+
+    button:hover {
+      border-color: var(--accent-2);
+      background: var(--accent-2);
+    }
+
+    button.secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--ink);
+    }
+
+    input,
+    select {
+      min-height: 32px;
+      padding: 5px 8px;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position:
+        calc(100% - 13px) 50%,
+        calc(100% - 8px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 24px;
+    }
+
+    input[type="range"] {
+      min-height: 26px;
+      padding: 0;
+      accent-color: var(--muted);
+    }
+
+    input[type="color"] {
+      height: 32px;
+      padding: 3px;
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+      padding: 8px;
+      line-height: 1.35;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+
+    .compact textarea {
+      min-height: 54px;
+    }
+
+    .footer-toggle {
+      min-height: 32px;
+    }
+
+    .footer-text-fields {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .footer-text-fields[hidden] {
+      display: none;
+    }
+
+    .footer-settings {
+      transition: opacity 0.16s ease;
+    }
+
+    .footer-settings.is-disabled {
+      opacity: 0.42;
+      pointer-events: none;
+    }
+
+    button {
+      min-height: 32px;
+      padding: 6px 9px;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+    }
+
+    button.secondary {
+      border-color: var(--line-strong);
+      background: var(--panel-3);
+      color: var(--ink);
+    }
+
+    button.is-active,
+    .segmented button.is-active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--field-bg-strong);
+      padding: 4px;
+    }
+
+    .segmented button {
+      min-height: 30px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0;
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .segmented button.is-active {
+      background: var(--panel-3);
+      color: var(--muted);
+      border-color: var(--line-strong);
+      box-shadow: inset 0 0 0 1px var(--line-strong);
+    }
+
+    .alignment-tools {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 98px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .random-letter-tool {
+      display: grid;
+      gap: 5px;
+      margin: 8px 0;
+      font-size: 11px;
+      font-weight: 760;
+      color: var(--muted);
+    }
+
+    .random-letter-tool button {
+      min-height: 40px;
+      border-color: var(--line);
+      background: var(--field-bg-strong);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .export-scale-control {
+      display: grid;
+      gap: 7px;
+      margin: 10px 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .export-scale-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .export-scale-options button {
+      min-height: 32px;
+      border-color: var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .export-scale-options button.is-active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-2);
+    }
+
+    body[data-ui-theme="light"] .export-scale-options button.is-active {
+      color: #9b5e00;
+    }
+
+    .export-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .align-icon {
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      width: 20px;
+      height: 18px;
+    }
+
+    .align-icon span {
+      display: block;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .align-left span:nth-child(1),
+    .align-left span:nth-child(3),
+    .align-right span:nth-child(1),
+    .align-right span:nth-child(3),
+    .align-center span:nth-child(1),
+    .align-center span:nth-child(3) {
+      width: 68%;
+    }
+
+    .align-left span:nth-child(2),
+    .align-right span:nth-child(2),
+    .align-center span:nth-child(2),
+    .align-justify span {
+      width: 100%;
+    }
+
+    .align-left span,
+    .align-justify span {
+      justify-self: start;
+    }
+
+    .align-center span {
+      justify-self: center;
+    }
+
+    .align-right span {
+      justify-self: end;
+    }
+
+    .align-justify span {
+      width: 100%;
+    }
+
+    .value {
+      min-width: 54px;
+      padding: 4px 5px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--field-bg-strong);
+      text-align: center;
+      font-size: 11px;
+      color: var(--ink);
+    }
+
+    .unit-input {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      min-width: 0;
+      min-height: 28px;
+      padding: 0 6px 0 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--field-bg-strong);
+      overflow: hidden;
+    }
+
+    .unit-input .value {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .unit-label {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+      user-select: none;
+    }
+
+    input.value {
+      min-height: 28px;
+      width: 70px;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 800;
+      appearance: textfield;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+    }
+
+    input.value::-webkit-outer-spin-button,
+    input.value::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button,
+    .dock-value::-webkit-outer-spin-button,
+    .dock-value::-webkit-inner-spin-button {
+      margin: 0;
+      display: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="number"] {
+      appearance: textfield;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+    }
+
+    .hint {
+      margin: 7px 0 0;
+      font-size: 11px;
+      line-height: 1.42;
+      color: var(--muted);
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .check-row input {
+      width: 15px;
+      height: 15px;
+      min-height: 0;
+      accent-color: var(--accent);
+    }
+
+    details.advanced {
+      margin: 10px 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--field-bg-strong);
+    }
+
+    details.advanced summary {
+      min-height: 30px;
+      padding: 7px 9px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--ink);
+      list-style: none;
+    }
+
+    details.advanced summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.advanced summary::after {
+      content: "▶";
+      float: right;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    details.advanced[open] summary::after {
+      content: "▼";
+    }
+
+    .advanced-body {
+      padding: 0 9px 9px;
+    }
+
+    .image-process .advanced-body {
+      display: grid;
+      gap: 9px;
+    }
+
+    .image-process .control-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .image-process .row {
+      grid-template-columns: minmax(0, 1fr) 62px;
+      gap: 8px;
+    }
+
+    .stage-wrap {
+      grid-column: 2;
+      position: relative;
+      min-width: 0;
+      height: var(--app-height);
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 58px 44px 84px;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px),
+        linear-gradient(0deg, var(--stage-grid) 1px, transparent 1px),
+        var(--stage-bg);
+      background-size: 24px 24px;
+      cursor: default;
+      user-select: none;
+    }
+
+    .stage-wrap.is-panning {
+      cursor: grabbing;
+    }
+
+    .canvas-dock {
+      position: fixed;
+      left: calc(var(--sidebar-offset) + (100vw - var(--sidebar-offset)) / 2);
+      bottom: 18px;
+      z-index: 20;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: 7px;
+      max-width: min(560px, calc(100vw - var(--sidebar-offset) - 32px));
+      padding: 7px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--dock-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transform: translateX(-50%);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.13);
+    }
+
+    .dock-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 38px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--panel-2);
+      flex: 0 0 auto;
+    }
+
+    .dock-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .dock-value {
+      width: 70px;
+      min-height: 32px;
+      padding: 4px 8px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--panel-3);
+      color: var(--ink);
+      text-align: center;
+      font-size: 14px;
+      font-weight: 900;
+      appearance: textfield;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+    }
+
+    .dock-unit {
+      margin-left: -4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .dock-select {
+      width: 162px;
+      min-height: 32px;
+      border: 0;
+      border-radius: 11px;
+      background-color: var(--panel-3);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 900;
+      -webkit-appearance: none;
+    }
+
+    .canvas-dock button {
+      width: auto;
+      min-width: 38px;
+      min-height: 38px;
+      padding: 6px 8px;
+      border-color: var(--line);
+      background: var(--panel-2);
+      color: var(--ink);
+      font-size: 13px;
+      border-radius: 13px;
+    }
+
+    .theme-icon-button {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      font-size: 0;
+      color: var(--muted);
+      overflow: hidden;
+    }
+
+    .theme-icon-button::before {
+      content: "☀";
+      font-size: 17px;
+      line-height: 1;
+      color: currentColor;
+    }
+
+    body[data-ui-theme="light"] .theme-icon-button::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: currentColor;
+      transform: translate(-50%, -50%);
+    }
+
+    body[data-ui-theme="light"] .theme-icon-button::after {
+      content: "";
+      position: absolute;
+      left: calc(50% + 7px);
+      top: calc(50% - 3px);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      transform: translate(-50%, -50%);
+    }
+
+    body[data-ui-theme="light"] .canvas-dock {
+      gap: 7px;
+      padding: 7px;
+      border-color: rgba(198, 203, 194, 0.74);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 16px 36px rgba(101, 105, 92, 0.12);
+    }
+
+    body[data-ui-theme="light"] .dock-group {
+      min-height: 38px;
+      padding: 5px 8px;
+      border-color: rgba(198, 203, 194, 0.66);
+      background: rgba(248, 249, 246, 0.72);
+    }
+
+    body[data-ui-theme="light"] .dock-label,
+    body[data-ui-theme="light"] .dock-unit {
+      color: #282b24;
+    }
+
+    body[data-ui-theme="light"] .dock-value,
+    body[data-ui-theme="light"] .dock-select {
+      background-color: #e5e7e5;
+      color: #10120d;
+    }
+
+    body[data-ui-theme="light"] .canvas-dock button {
+      border-color: rgba(198, 203, 194, 0.8);
+      background: #ffffff;
+      color: #d9dcd9;
+      box-shadow: 0 10px 22px rgba(101, 105, 92, 0.1);
+    }
+
+    .poster-shell {
+      width: var(--canvas-fit-w);
+      position: relative;
+    }
+
+    .poster {
+      width: 100%;
+      min-width: 40px;
+      position: relative;
+      aspect-ratio: var(--poster-ratio, 0.82);
+      background: var(--poster-bg);
+      box-shadow: 0 28px 76px var(--shadow);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: var(--poster-pad);
+      overflow: hidden;
+    }
+
+    .main-copy {
+      min-height: 0;
+      color: var(--main-color);
+      font-family: var(--main-latin);
+      font-size: var(--main-size);
+      font-weight: var(--main-latin-weight);
+      -webkit-text-stroke: var(--main-latin-stroke) var(--main-stroke-color);
+      paint-order: stroke fill;
+      line-height: var(--main-leading);
+      letter-spacing: var(--main-tracking);
+      text-align: var(--main-align);
+      word-break: normal;
+      overflow-wrap: anywhere;
+      hyphens: auto;
+      line-break: loose;
+    }
+
+    .secondary-copy {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(18px, 6%, 64px);
+      align-items: end;
+      margin-top: 22px;
+      color: var(--secondary-color);
+      font-family: var(--main-latin);
+      font-size: var(--secondary-size);
+      font-weight: var(--main-latin-weight);
+      -webkit-text-stroke: 0 currentColor;
+      paint-order: stroke fill;
+      line-height: var(--secondary-leading);
+      letter-spacing: var(--secondary-tracking);
+      word-break: normal;
+      overflow-wrap: anywhere;
+      line-break: loose;
+    }
+
+    .poster.footer-hidden {
+      grid-template-rows: 1fr;
+    }
+
+    .poster.footer-hidden .secondary-copy {
+      display: none;
+    }
+
+    .secondary-copy > div {
+      text-align: var(--secondary-align);
+      min-width: 0;
+    }
+
+    .cjk-main {
+      font-family: var(--main-cjk);
+      position: relative;
+      top: var(--cjk-baseline-shift);
+      font-size: var(--cjk-size-scale);
+      font-weight: var(--main-cjk-weight);
+      -webkit-text-stroke: var(--main-cjk-stroke) var(--main-stroke-color);
+      line-height: inherit;
+      vertical-align: baseline;
+    }
+
+    .cjk-secondary {
+      font-family: var(--main-cjk);
+      position: relative;
+      top: var(--cjk-baseline-shift);
+      font-size: var(--cjk-size-scale);
+      font-weight: var(--main-cjk-weight);
+      -webkit-text-stroke: 0 currentColor;
+      line-height: inherit;
+      vertical-align: baseline;
+    }
+
+    .random-letter {
+      display: inline-block;
+      transform-origin: 50% 70%;
+    }
+
+    .image-token {
+      display: inline-block;
+      white-space: nowrap;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      word-break: keep-all;
+      overflow-wrap: normal;
+      line-height: inherit;
+      vertical-align: baseline;
+    }
+
+    .inline-image {
+      display: inline-flex;
+      width: calc(1em * var(--image-scale));
+      height: calc(1em * var(--image-scale) * 0.78);
+      margin: 0 0.08em;
+      vertical-align: var(--image-shift);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .inline-image img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .empty-image {
+      border: 2px dashed #b8bcb3;
+      border-radius: 7px;
+      color: #8b9087;
+      font-size: 0.28em;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .paren {
+      display: inline-block;
+      font-size: 1.18em;
+      line-height: 0;
+      vertical-align: -0.02em;
+      letter-spacing: 0;
+    }
+
+    .typewriter-unit {
+      opacity: var(--typewriter-opacity, 1);
+    }
+
+    .image-token.typewriter-unit {
+      display: inline-block;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: var(--sidebar-offset) minmax(0, 1fr);
+      }
+
+      .sidebar {
+        height: var(--app-height);
+        max-height: var(--app-height);
+        border-right: 1px solid var(--line);
+        border-bottom: 0;
+      }
+
+      .stage-wrap {
+        height: var(--app-height);
+        min-height: var(--app-height);
+        padding: 42px 16px 96px;
+      }
+
+      .canvas-dock {
+        bottom: 14px;
+        max-width: calc(100vw - 24px);
+      }
+
+      .poster-shell {
+        width: min(var(--canvas-fit-w), 100%);
+      }
+
+      .poster {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 720px), (pointer: coarse) and (max-width: 1024px) {
+      .app {
+        --sidebar-width: min(338px, calc(100vw - 18px));
+      }
+
+      .toolbar-float-toggle {
+        left: 10px;
+        top: max(10px, env(safe-area-inset-top));
+      }
+
+      .sidebar {
+        padding: max(12px, env(safe-area-inset-top)) 10px max(16px, env(safe-area-inset-bottom));
+      }
+
+      .stage-wrap {
+        padding:
+          max(44px, calc(env(safe-area-inset-top) + 34px))
+          12px
+          max(128px, calc(env(safe-area-inset-bottom) + 112px));
+      }
+
+      .canvas-dock {
+        left: 50%;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: calc(100vw - 20px);
+        max-width: 420px;
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 6px;
+        border-radius: 14px;
+      }
+
+      .dock-group {
+        min-height: 34px;
+        padding: 4px 6px;
+        gap: 4px;
+        border-radius: 11px;
+      }
+
+      .dock-label,
+      .dock-unit {
+        font-size: 11px;
+      }
+
+      .dock-value {
+        width: 54px;
+        min-height: 29px;
+        padding: 3px 6px;
+        font-size: 12px;
+      }
+
+      .dock-select {
+        width: 118px;
+        min-height: 29px;
+        font-size: 12px;
+      }
+
+      .canvas-dock button,
+      .theme-icon-button {
+        min-width: 34px;
+        width: 34px;
+        min-height: 34px;
+        height: 34px;
+        border-radius: 11px;
+      }
+
+      .poster-shell {
+        max-width: calc(100vw - 24px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-header {
+        gap: 8px;
+      }
+
+      .app-title {
+        font-size: 14px;
+      }
+
+      .reset-button {
+        min-width: 60px;
+        min-height: 30px;
+        padding: 6px 8px;
+        font-size: 12px;
+      }
+
+      .canvas-dock {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body data-ui-theme="dark">
+  <main class="app" id="app">
+    <button id="sidebarFloatingToggle" class="toolbar-toggle toolbar-float-toggle" type="button" aria-label="打开工具栏" aria-expanded="false"></button>
+    <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+    <aside class="sidebar" aria-label="排版控制">
+      <div class="app-header">
+        <div class="app-title">Auto Zonglin</div>
+        <div class="header-actions">
+          <button id="resetDefaults" class="reset-button" type="button">Reset</button>
+          <button id="sidebarToggle" class="toolbar-toggle" type="button" aria-label="折叠工具栏" aria-expanded="true"></button>
+        </div>
+      </div>
+
+      <section class="section">
+        <details class="section-panel" open>
+          <summary class="section-title"><span class="section-icon">W</span><span class="section-name">画布大小</span></summary>
+          <div class="section-body">
+            <label>
+              画布大小
+              <div class="row">
+                <input id="canvasWidth" type="range" min="10" max="100" value="100">
+                <span class="unit-input"><input id="canvasWidthValue" class="value" type="number" min="10" max="100" value="100" aria-label="画布显示大小百分比"><span class="unit-label">%</span></span>
+              </div>
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <details class="section-panel" open>
+          <summary class="section-title"><span class="section-icon">T</span><span class="section-name">Text 文本</span></summary>
+          <div class="section-body">
+            <label>
+              文字内容
+              <textarea id="mainText" spellcheck="false" autocomplete="off"></textarea>
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <details id="typeSettingsPanel" class="section-panel">
+          <summary class="section-title"><span class="section-icon">A</span><span class="section-name">Type 字符设置</span></summary>
+          <div class="section-body">
+        <div class="control-grid">
+          <label>
+            英文字体
+            <select id="mainLatin">
+              <option value='Inter, sans-serif'>Inter</option>
+            </select>
+          </label>
+          <label>
+            中文字体
+            <select id="mainCjk">
+              <option value='"Noto Sans SC", sans-serif'>Noto Sans SC</option>
+            </select>
+          </label>
+        </div>
+        <div class="control-grid">
+          <button id="customLatinFontButton" class="secondary font-upload-button" type="button">上传英文字体</button>
+          <button id="customCjkFontButton" class="secondary font-upload-button" type="button">上传中文字体</button>
+        </div>
+        <input id="customLatinFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple hidden>
+        <input id="customCjkFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple hidden>
+        <div class="control-grid">
+          <label>
+            英文字重
+            <select id="mainLatinWeight">
+              <option value="300">Light 300</option>
+              <option value="400">Regular 400</option>
+              <option value="500">Medium 500</option>
+              <option value="600">SemiBold 600</option>
+              <option value="700" selected>Bold 700</option>
+              <option value="760">Poster 760</option>
+              <option value="900">Black 900</option>
+            </select>
+          </label>
+          <label>
+            中文字重
+            <select id="mainCjkWeight">
+              <option value="300">300</option>
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="600">600</option>
+              <option value="700" selected>700</option>
+              <option value="760">760</option>
+              <option value="900">900</option>
+            </select>
+          </label>
+        </div>
+        <details id="mainTypographyAdvanced" class="advanced">
+          <summary>字号 / 字间距 / 行间距</summary>
+          <div class="advanced-body">
+            <label>
+              字号
+              <div class="row">
+                <input id="mainSize" type="range" min="5" max="100" value="30">
+                <span class="unit-input"><input id="mainSizeValue" class="value" type="number" min="5" max="100" value="30" aria-label="正文字号数值"><span class="unit-label">px</span></span>
+              </div>
+            </label>
+            <label>
+              字间距
+              <div class="row">
+                <input id="mainTracking" type="range" min="-8" max="10" value="0">
+                <span class="unit-input"><input id="mainTrackingValue" class="value" type="number" min="-8" max="10" value="0" aria-label="正文字间距数值"><span class="unit-label">%</span></span>
+              </div>
+            </label>
+            <label>
+              行间距
+              <div class="row">
+                <input id="mainLeading" type="range" min="78" max="150" value="100">
+                <span class="unit-input"><input id="mainLeadingValue" class="value" type="number" min="78" max="150" value="100" aria-label="正文行间距数值"><span class="unit-label">%</span></span>
+              </div>
+            </label>
+          </div>
+        </details>
+        <div class="alignment-tools">
+          <label>
+            对齐方式
+            <div class="segmented" data-align-group="main">
+              <button type="button" data-align="left" class="is-active" aria-label="左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="center" aria-label="居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="right" aria-label="右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="justify" aria-label="两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
+            </div>
+          </label>
+          <div class="random-letter-tool">
+            随机字母
+            <button id="randomLetters" class="secondary" type="button">随机字母大小</button>
+          </div>
+        </div>
+        <div class="color-field" id="mainColorPanel">
+          <button class="control-toggle" id="mainColorToggle" type="button" aria-expanded="false" aria-controls="mainColorOptions">
+            <span class="control-icon color-icon" aria-hidden="true"></span>
+            <span>文字颜色</span>
+          </button>
+          <div class="control-panel" id="mainColorOptions">
+          <div class="color-control">
+            <button id="mainColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <div class="color-value">
+              <input id="mainColor" type="color" value="#1ab79a">
+              <input id="mainColorHex" class="color-hex" type="text" value="#1ab79a" aria-label="文字颜色色号" spellcheck="false">
+            </div>
+            <button id="randomMainColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+          </div>
+          </div>
+        </div>
+        <div class="stroke-field" id="mainStrokePanel">
+          <button class="control-toggle" id="mainStrokeToggle" type="button" aria-expanded="false" aria-controls="mainStrokeOptions">
+            <span class="control-icon stroke-icon" aria-hidden="true"></span>
+            <span>文字描边</span>
+          </button>
+          <div class="control-panel" id="mainStrokeOptions">
+          <div class="color-control">
+            <button id="mainStrokeColorMode" class="color-mode is-light secondary" type="button"><span>黑/白</span></button>
+            <div class="color-value">
+              <input id="mainStrokeColor" type="color" value="#ffffff">
+              <input id="mainStrokeColorHex" class="color-hex" type="text" value="#ffffff" aria-label="描边颜色色号" spellcheck="false">
+            </div>
+            <button id="randomMainStrokeColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+          </div>
+          <div class="stroke-row">
+            <input id="mainStrokeWidth" type="range" min="0" max="8" step="0.5" value="0">
+            <span class="unit-input"><input id="mainStrokeWidthValue" class="value" type="number" min="0" max="8" step="0.5" value="0" aria-label="描边宽度"><span class="unit-label">px</span></span>
+          </div>
+          </div>
+        </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="section compact">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">T</span><span class="section-name">Text 副文本</span></summary>
+          <div class="section-body">
+        <button id="footerVisibilityToggle" class="secondary footer-toggle" type="button" aria-pressed="false" aria-controls="footerTextFields">底部文字</button>
+        <div id="footerTextFields" class="footer-text-fields" hidden>
+            <label>
+              左侧长栏
+              <textarea id="footerOne" spellcheck="false"></textarea>
+            </label>
+            <label>
+              中间长栏
+              <textarea id="footerTwo" spellcheck="false"></textarea>
+            </label>
+            <label>
+              右侧小栏
+              <textarea id="footerThree" spellcheck="false"></textarea>
+            </label>
+        </div>
+        <div id="secondaryTextControls" class="footer-settings" aria-disabled="true">
+        <details class="advanced">
+          <summary>字号 / 字间距 / 行间距</summary>
+          <div class="advanced-body">
+            <label>
+              字号
+              <div class="row">
+                <input id="secondarySize" type="range" min="8" max="30" value="10">
+                <span class="unit-input"><input id="secondarySizeValue" class="value" type="number" min="8" max="30" value="10" aria-label="底部字号数值"><span class="unit-label">px</span></span>
+              </div>
+            </label>
+            <label>
+              字间距
+              <div class="row">
+                <input id="secondaryTracking" type="range" min="-5" max="12" value="0">
+                <span class="unit-input"><input id="secondaryTrackingValue" class="value" type="number" min="-5" max="12" value="0" aria-label="底部字间距数值"><span class="unit-label">%</span></span>
+              </div>
+            </label>
+            <label>
+              行间距
+              <div class="row">
+                <input id="secondaryLeading" type="range" min="80" max="160" value="112">
+                <span class="unit-input"><input id="secondaryLeadingValue" class="value" type="number" min="80" max="160" value="112" aria-label="底部行间距数值"><span class="unit-label">%</span></span>
+              </div>
+            </label>
+          </div>
+        </details>
+        <div class="color-field" id="secondaryColorPanel">
+          <button class="control-toggle" id="secondaryColorToggle" type="button" aria-expanded="false" aria-controls="secondaryColorOptions">
+            <span class="control-icon color-icon" aria-hidden="true"></span>
+            <span>文字颜色</span>
+          </button>
+          <div class="control-panel" id="secondaryColorOptions">
+          <div class="color-control">
+            <button id="secondaryColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <div class="color-value">
+              <input id="secondaryColor" type="color" value="#111111">
+              <input id="secondaryColorHex" class="color-hex" type="text" value="#111111" aria-label="底部文字颜色色号" spellcheck="false">
+            </div>
+            <button id="randomSecondaryColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+          </div>
+          </div>
+        </div>
+        <label>
+          对齐方式
+          <div class="segmented" data-align-group="secondary">
+            <button type="button" data-align="left" class="is-active" aria-label="底部左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="center" aria-label="底部居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="right" aria-label="底部右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="justify" aria-label="底部两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
+          </div>
+        </label>
+        </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">I</span><span class="section-name">Image 图片</span></summary>
+          <div class="section-body">
+            <div class="control-grid">
+              <button id="pickFolder" type="button">选择文件夹</button>
+              <button id="shuffleImages" class="secondary" type="button">随机图片</button>
+            </div>
+            <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple hidden>
+            <p id="folderStatus" class="hint">尚未选择图片文件夹。文字里的空花括号会先显示为占位框。</p>
+            <details class="advanced image-process">
+              <summary>图片处理</summary>
+              <div class="advanced-body">
+                <div class="control-grid">
+                  <label>
+                    图片大小
+                    <div class="row">
+                      <input id="imageScale" type="range" min="60" max="300" value="118">
+                      <span class="unit-input"><input id="imageScaleValue" class="value" type="number" min="60" max="300" value="118" aria-label="图片大小数值"><span class="unit-label">%</span></span>
+                    </div>
+                  </label>
+                  <label>
+                    图片基线
+                    <div class="row">
+                      <input id="imageShift" type="range" min="-45" max="30" value="-12">
+                      <span class="unit-input"><input id="imageShiftValue" class="value" type="number" min="-45" max="30" value="-12" aria-label="图片基线数值"><span class="unit-label">em</span></span>
+                    </div>
+                  </label>
+                </div>
+                <label class="check-row">
+                  <input id="randomRemoveBg" type="checkbox">
+                  随机去背景
+                </label>
+              </div>
+            </details>
+            <div class="color-field">
+              背景色
+              <div class="color-control">
+                <button id="posterBgMode" class="color-mode is-light secondary" type="button"><span>黑/白</span></button>
+                <div class="color-value">
+                  <input id="posterBg" type="color" value="#fffefa">
+                  <input id="posterBgHex" class="color-hex" type="text" value="#fffefa" aria-label="背景色色号" spellcheck="false">
+                </div>
+                <button id="randomPosterBg" class="color-random is-front secondary" type="button"><span>随机</span></button>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">M</span><span class="section-name">Motion 动画</span></summary>
+          <div class="section-body">
+            <label class="check-row">
+              <input id="typewriterToggle" type="checkbox">
+              打字机动画
+            </label>
+            <label>
+              出现时间
+              <div class="row">
+                <input id="typewriterDuration" type="range" min="1" max="12" step="0.5" value="3">
+                <span class="unit-input"><input id="typewriterDurationValue" class="value" type="number" min="1" max="12" step="0.5" value="3" aria-label="打字机动画秒数"><span class="unit-label">s</span></span>
+              </div>
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <section class="section">
+        <details class="section-panel">
+          <summary class="section-title"><span class="section-icon">↓</span><span class="section-name">Export 导出</span></summary>
+          <div class="section-body">
+        <div class="export-scale-control">
+          SCALE
+          <div class="export-scale-options" data-export-scale-group>
+            <button type="button" class="is-active" data-export-scale="1">1x</button>
+            <button type="button" data-export-scale="2">2x</button>
+            <button type="button" data-export-scale="3">3x</button>
+          </div>
+        </div>
+        <p id="exportSize" class="hint">输出：760 × 1013 px</p>
+        <p id="exportStatus" class="hint">导出会按照下方 W/H 的真实画板尺寸生成文件。</p>
+        <div class="export-actions">
+          <button id="exportPngBottom" type="button">导出 PNG</button>
+          <button id="printPdfBottom" class="secondary" type="button">导出 PDF</button>
+          <button id="exportMp4Bottom" class="secondary" type="button">导出 MP4</button>
+        </div>
+          </div>
+        </details>
+      </section>
+    </aside>
+
+    <section class="stage-wrap" aria-label="海报预览">
+      <div class="poster-shell">
+        <article id="poster" class="poster">
+          <div id="mainCopy" class="main-copy" lang="zh-CN"></div>
+          <footer class="secondary-copy">
+            <div id="footerOneOut"></div>
+            <div id="footerTwoOut"></div>
+            <div id="footerThreeOut"></div>
+          </footer>
+        </article>
+      </div>
+      <div class="canvas-dock" aria-label="画布快捷设置">
+        <div class="dock-group">
+          <span class="dock-label">W</span>
+          <input id="canvasWidthDock" class="dock-value" type="number" min="100" max="1080" value="760" aria-label="画布宽度">
+          <span class="dock-unit">px</span>
+          <span class="dock-label">H</span>
+          <input id="canvasHeightDock" class="dock-value" type="number" min="100" max="1920" value="1013" aria-label="画布高度">
+          <span class="dock-unit">px</span>
+        </div>
+        <div class="dock-group">
+          <span class="dock-label">Ratio</span>
+          <select id="canvasRatio" class="dock-select" aria-label="画布比例">
+            <option value="custom">Custom</option>
+            <option value="1.7777778">HD 16:9</option>
+            <option value="1">Square 1:1</option>
+            <option value="1.3333333">4:3</option>
+            <option value="0.5625">Portrait 9:16</option>
+            <option value="0.75" selected>Portrait 3:4</option>
+            <option value="0.7070707">A4</option>
+          </select>
+        </div>
+        <button id="themeToggle" class="theme-icon-button secondary" type="button" aria-label="切换亮暗界面"></button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const defaults = {
+      mainText: "UTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images []/ choose a folder and let every text marker become an inline visual interruption () / typography, image scale, color, rhythm, and spacing can be adjusted while the composition keeps reflowing { } / English copy leads the reading path, with Chinese annotation following as a second voice () / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / the final canvas can be exported as PNG or PDF for poster tests, layout studies, and visual collections { } / 可以通过不同形式括号来嵌入图片{ }/()/Images can be embedded using different forms of brackets/ {}/[ ].",
+      footerOne: "We look at all the different topics in the world from our perspective.\n从不同视角收集图像与文字。",
+      footerTwo: "And we're collecting these themes and creating them in various new forms.\n让图文搭配生成新的版式。",
+      footerThree: "/ Collected by Zonglin"
+    };
+
+    const els = Object.fromEntries(Array.from(document.querySelectorAll("[id]")).map((el) => [el.id, el]));
+    const state = {
+      imageItems: [],
+      imageOrder: [],
+      randomLetter: false,
+      loadToken: 0,
+      exportScale: 1,
+      typewriterTimer: 0,
+      typewriterFrame: 0,
+      typewriterUnits: [],
+      typewriterCompleted: false,
+      footerVisible: true,
+      sidebarUserCollapsed: false,
+      sidebarOverlayOpen: false,
+      touchDevice: false,
+      customFontWeights: {
+        latin: new Map(),
+        cjk: new Map()
+      },
+      seed: Date.now()
+    };
+    const defaultWeightOptions = {
+      latin: Array.from(els.mainLatinWeight.options).map((option) => ({
+        value: option.value,
+        label: option.textContent,
+        selected: option.defaultSelected
+      })),
+      cjk: Array.from(els.mainCjkWeight.options).map((option) => ({
+        value: option.value,
+        label: option.textContent,
+        selected: option.defaultSelected
+      }))
+    };
+
+    function setVar(name, value) {
+      document.documentElement.style.setProperty(name, value);
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function seeded(index, offset = 0) {
+      const x = Math.sin(index * 999 + state.seed + offset) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function decoratePlainText(text, secondary = false) {
+      const cjkClass = secondary ? "cjk-secondary" : "cjk-main";
+      let html = "";
+      let cjkRun = "";
+      let charIndex = 0;
+      const flushCjk = () => {
+        if (cjkRun) {
+          html += `<span class="${cjkClass}">${escapeHtml(cjkRun)}</span>`;
+          cjkRun = "";
+        }
+      };
+
+      for (const char of text) {
+        if (/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(char)) {
+          cjkRun += char;
+          charIndex += 1;
+          continue;
+        }
+
+        flushCjk();
+        const safe = escapeHtml(char);
+        if (!secondary && state.randomLetter && /[A-Za-z]/.test(char)) {
+          const scale = (0.82 + seeded(charIndex, 11) * 0.44).toFixed(2);
+          html += `<span class="random-letter" style="font-size:${scale}em">${safe}</span>`;
+        } else {
+          html += safe;
+        }
+
+        if (/[_/／、，。；：！？,.!?;:)-]/.test(char)) {
+          html += "<wbr>";
+        }
+        charIndex += 1;
+      }
+      flushCjk();
+      return html;
+    }
+
+    function decorateMultilineText(text, secondary = false) {
+      return String(text || "").split(/\r?\n/).map((line) => decoratePlainText(line, secondary)).join("<br>");
+    }
+
+    function shuffle(array) {
+      const copy = array.slice();
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(seeded(i, 101) * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function rebuildImageOrder() {
+      state.seed = Date.now();
+      state.imageOrder = shuffle(state.imageItems);
+    }
+
+    function imageSlot(index, marker = "{ }") {
+      const bracketMap = {
+        "(": [ "(", ")" ],
+        "（": [ "（", "）" ],
+        "【": [ "【", "】" ],
+        "[": [ "[", "]" ],
+        "｛": [ "｛", "｝" ],
+        "{": [ "{", "}" ]
+      };
+      const [open, close] = bracketMap[marker.trim()[0]] || [ "{", "}" ];
+      const items = state.imageOrder.length ? state.imageOrder : state.imageItems;
+      const item = items[index % Math.max(items.length, 1)];
+      if (!item) {
+        return `<span class="image-token"><span class="paren">${open}</span><span class="inline-image empty-image">IMG</span><span class="paren">${close}</span></span>`;
+      }
+      const useCutout = els.randomRemoveBg.checked && item.cutout && item.clearSubject && seeded(index, 701) > 0.34;
+      const src = useCutout ? item.cutout : item.src;
+      return `<span class="image-token"><span class="paren">${open}</span><span class="inline-image"><img src="${src}" alt=""></span><span class="paren">${close}</span></span>`;
+    }
+
+    function renderMain() {
+      const imageMarkerPattern = /^(\{\s*\}|｛\s*｝|\(\s*\)|（\s*）|【\s*】|\[\s*\])$/;
+      const parts = els.mainText.value.split(/(\{\s*\}|｛\s*｝|\(\s*\)|（\s*）|【\s*】|\[\s*\])/g);
+      let slot = 0;
+      els.mainCopy.innerHTML = parts.map((part) => {
+        if (imageMarkerPattern.test(part)) {
+          const markup = imageSlot(slot, part);
+          slot += 1;
+          return markup;
+        }
+        return decorateMultilineText(part);
+      }).join("");
+      refreshTypewriter();
+    }
+
+    function renderFooter() {
+      els.footerOneOut.innerHTML = decorateMultilineText(els.footerOne.value, true);
+      els.footerTwoOut.innerHTML = decorateMultilineText(els.footerTwo.value, true);
+      els.footerThreeOut.innerHTML = decorateMultilineText(els.footerThree.value, true);
+      refreshTypewriter();
+    }
+
+    function refreshTypewriter({ restart = false } = {}) {
+      if (!els.typewriterToggle?.checked) {
+        clearTypewriterTimer();
+        disableTypewriter();
+        return;
+      }
+      if (!restart) {
+        clearTypewriterTimer();
+        completeTypewriter();
+        return;
+      }
+      startTypewriterAnimation();
+    }
+
+    function startTypewriterAnimation() {
+      clearTypewriterTimer();
+      const items = buildTypewriterUnits();
+      const seconds = Math.max(0.2, Number(els.typewriterDuration?.value || 3));
+      const startedAt = performance.now();
+
+      const tick = (now) => {
+        const progress = Math.min(1, (now - startedAt) / (seconds * 1000));
+        setTypewriterUnitReveal(items, Math.floor(progress * items.length));
+        if (progress < 1) {
+          state.typewriterFrame = requestAnimationFrame(tick);
+          return;
+        }
+        setTypewriterUnitReveal(items, items.length);
+        state.typewriterTimer = window.setTimeout(() => {
+          completeTypewriter();
+          state.typewriterCompleted = true;
+        }, 80);
+      };
+      setTypewriterUnitReveal(items, 0);
+      state.typewriterFrame = requestAnimationFrame(tick);
+    }
+
+    function clearTypewriterTimer() {
+      if (state.typewriterTimer) {
+        window.clearTimeout(state.typewriterTimer);
+        state.typewriterTimer = 0;
+      }
+      if (state.typewriterFrame) {
+        window.cancelAnimationFrame(state.typewriterFrame);
+        state.typewriterFrame = 0;
+      }
+    }
+
+    function completeTypewriter() {
+      setTypewriterUnitReveal(state.typewriterUnits, state.typewriterUnits.length);
+      state.typewriterTimer = 0;
+      state.typewriterFrame = 0;
+    }
+
+    function disableTypewriter() {
+      cleanupTypewriterUnits();
+      state.typewriterTimer = 0;
+      state.typewriterFrame = 0;
+      state.typewriterCompleted = false;
+    }
+
+    function closeCompletedTypewriter() {
+      if (!state.typewriterCompleted || !els.typewriterToggle.checked) return;
+      els.typewriterToggle.checked = false;
+      disableTypewriter();
+    }
+
+    function handleControlInteraction(event) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#exportMp4Bottom") || target.closest("#typewriterToggle")) return;
+      if (!target.closest(".sidebar") && !target.closest(".canvas-dock")) return;
+      closeCompletedTypewriter();
+    }
+
+    function getViewportHeight() {
+      return Math.round(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+    }
+
+    function updateViewportMetrics() {
+      const height = Math.max(320, getViewportHeight());
+      setVar("--app-height", `${height}px`);
+      state.touchDevice = window.matchMedia?.("(pointer: coarse)")?.matches || navigator.maxTouchPoints > 0;
+      document.body.classList.toggle("is-touch-device", state.touchDevice);
+      document.body.classList.toggle("is-safari", /^((?!chrome|android).)*safari/i.test(navigator.userAgent));
+      updateImagePickerMode();
+      updateCanvasFit();
+    }
+
+    function supportsDirectoryPicker() {
+      return "showDirectoryPicker" in window || "webkitdirectory" in document.createElement("input");
+    }
+
+    function prefersFilePicker() {
+      return state.touchDevice || !supportsDirectoryPicker();
+    }
+
+    function updateImagePickerMode() {
+      if (!els.pickFolder || !els.folderInput) return;
+      const fileMode = prefersFilePicker();
+      els.pickFolder.textContent = fileMode ? "选择图片" : "选择文件夹";
+      els.pickFolder.title = fileMode ? "当前设备将打开多图片选择。" : "选择包含图片的文件夹。";
+      els.folderInput.toggleAttribute("webkitdirectory", !fileMode);
+      els.folderInput.multiple = true;
+    }
+
+    function buildTypewriterUnits() {
+      cleanupTypewriterUnits();
+      const roots = [els.mainCopy, document.querySelector(".secondary-copy")];
+      const units = [];
+      roots.forEach((root) => wrapTypewriterNode(root, units));
+      state.typewriterUnits = units;
+      return units;
+    }
+
+    function wrapTypewriterNode(node, units) {
+      if (!node) return;
+      if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("image-token")) {
+        node.classList.add("typewriter-unit");
+        node.style.setProperty("--typewriter-opacity", "0");
+        units.push(node);
+        return;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("typewriter-unit")) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const fragment = document.createDocumentFragment();
+        tokenizeTypewriterText(node.textContent || "").forEach((token) => {
+          if (/^\s+$/.test(token)) {
+            fragment.appendChild(document.createTextNode(token));
+            return;
+          }
+          const span = document.createElement("span");
+          span.className = "typewriter-unit";
+          span.textContent = token;
+          span.style.setProperty("--typewriter-opacity", "0");
+          fragment.appendChild(span);
+          units.push(span);
+        });
+        node.replaceWith(fragment);
+        return;
+      }
+      Array.from(node.childNodes).forEach((child) => wrapTypewriterNode(child, units));
+    }
+
+    function tokenizeTypewriterText(text) {
+      return text.match(/\s+|[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|[^\s]/gu) || [];
+    }
+
+    function setTypewriterUnitReveal(units, visibleCount) {
+      units.forEach((unit, index) => {
+        unit.style.setProperty("--typewriter-opacity", index < visibleCount ? "1" : "0");
+      });
+    }
+
+    function cleanupTypewriterUnits() {
+      els.poster.querySelectorAll(".image-token.typewriter-unit").forEach((node) => {
+        node.classList.remove("typewriter-unit");
+        node.style.removeProperty("--typewriter-opacity");
+      });
+      els.poster.querySelectorAll("span.typewriter-unit").forEach((node) => {
+        node.replaceWith(document.createTextNode(node.textContent || ""));
+      });
+      els.poster.normalize();
+      state.typewriterUnits = [];
+    }
+
+    function bindRange(id, outputId, cssName, cssValue) {
+      const input = els[id];
+      const output = els[outputId];
+      const update = () => {
+        output.value = input.value;
+        if (cssName && cssValue) setVar(cssName, cssValue(input.value));
+      };
+      const updateFromOutput = () => {
+        const parsed = Number(output.value);
+        if (!Number.isFinite(parsed)) return;
+        const min = Number(input.min);
+        const max = Number(input.max);
+        const next = Math.min(max, Math.max(min, parsed));
+        output.value = next;
+        input.value = next;
+        if (cssName && cssValue) setVar(cssName, cssValue(input.value));
+      };
+      input.addEventListener("input", update);
+      output.addEventListener("change", updateFromOutput);
+      output.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") output.blur();
+      });
+      update();
+    }
+
+    function bindSelect(id, cssName) {
+      const input = els[id];
+      const update = () => setVar(cssName, input.value);
+      input.addEventListener("input", update);
+      input.addEventListener("change", update);
+      update();
+    }
+
+    function getWeightSelect(target) {
+      return target === "cjk" ? els.mainCjkWeight : els.mainLatinWeight;
+    }
+
+    function getFontSelect(target) {
+      return target === "cjk" ? els.mainCjk : els.mainLatin;
+    }
+
+    function getWeightCssName(target) {
+      return target === "cjk" ? "--main-cjk-weight" : "--main-latin-weight";
+    }
+
+    function getWeightLabel(value, target) {
+      if (target === "cjk") return value;
+      const names = {
+        100: "Thin",
+        200: "ExtraLight",
+        300: "Light",
+        400: "Regular",
+        500: "Medium",
+        600: "SemiBold",
+        700: "Bold",
+        800: "ExtraBold",
+        900: "Black"
+      };
+      return names[value] ? `${names[value]} ${value}` : value;
+    }
+
+    function pickClosestWeight(options, preferred) {
+      const preferredNumber = Number(preferred) || 400;
+      return options.reduce((best, option) => {
+        const distance = Math.abs((Number(option.value) || 400) - preferredNumber);
+        const bestDistance = Math.abs((Number(best.value) || 400) - preferredNumber);
+        return distance < bestDistance ? option : best;
+      }, options[0]);
+    }
+
+    function setWeightOptions(target, options, preferredValue) {
+      const select = getWeightSelect(target);
+      const normalized = options.length ? options : defaultWeightOptions[target];
+      const current = preferredValue || select.value || "700";
+      select.replaceChildren();
+      normalized.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.label;
+        select.appendChild(option);
+      });
+      const match = normalized.find((item) => item.value === current) || pickClosestWeight(normalized, current);
+      select.value = match?.value || normalized[0]?.value || "400";
+      setVar(getWeightCssName(target), select.value);
+    }
+
+    function updateFontWeightOptions(target) {
+      const fontValue = getFontSelect(target).value;
+      const customOptions = state.customFontWeights[target].get(fontValue);
+      setWeightOptions(target, customOptions || defaultWeightOptions[target]);
+    }
+
+    function quoteFontFamily(family) {
+      return `"${String(family).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    }
+
+    function normalizeFontFileName(fileName) {
+      return String(fileName || "")
+        .replace(/\.[^.]+$/, "")
+        .replace(/\[[^\]]+\]/g, " ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/[._-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function inferFontFamily(fileName) {
+      const cleaned = normalizeFontFileName(fileName)
+        .replace(/\b(?:thin|hairline|extra\s*light|ultra\s*light|light|regular|book|normal|medium|semi\s*bold|demi\s*bold|bold|extra\s*bold|ultra\s*bold|black|heavy|italic|oblique|roman|variable\s*font|variable|static|vf|wght|opsz|wdth|100|200|300|400|500|600|700|800|900)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned || "Custom Font";
+    }
+
+    function inferFontWeight(fileName) {
+      const name = normalizeFontFileName(fileName);
+      const rules = [
+        ["100", /\b(?:thin|hairline|100)\b/i],
+        ["200", /\b(?:extra\s*light|ultra\s*light|200)\b/i],
+        ["300", /\b(?:light|300)\b/i],
+        ["500", /\b(?:medium|500)\b/i],
+        ["600", /\b(?:semi\s*bold|demi\s*bold|600)\b/i],
+        ["800", /\b(?:extra\s*bold|ultra\s*bold|800)\b/i],
+        ["900", /\b(?:black|heavy|900)\b/i],
+        ["700", /\b(?:bold|700)\b/i],
+        ["400", /\b(?:regular|book|normal|400)\b/i]
+      ];
+      return (rules.find(([, pattern]) => pattern.test(name)) || ["400"])[0];
+    }
+
+    function inferFontStyle(fileName) {
+      return /\b(?:italic|oblique)\b/i.test(normalizeFontFileName(fileName)) ? "italic" : "normal";
+    }
+
+    function appendFontOption(select, label, value) {
+      let option = Array.from(select.options).find((item) => item.value === value);
+      if (!option) {
+        option = document.createElement("option");
+        option.value = value;
+        option.textContent = `自定义 / ${label}`;
+        select.appendChild(option);
+      }
+      return option;
+    }
+
+    function addFontOption(select, label, value) {
+      appendFontOption(select, label, value);
+      select.value = value;
+      select.dispatchEvent(new Event("input", { bubbles: true }));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    async function loadCustomFonts(files, target) {
+      const fontFiles = files.filter((file) => /\.(ttf|otf|woff2?)$/i.test(file.name));
+      if (!fontFiles.length) return;
+      const isCjk = target === "cjk";
+      const button = isCjk ? els.customCjkFontButton : els.customLatinFontButton;
+      const input = isCjk ? els.customCjkFontInput : els.customLatinFontInput;
+      const select = isCjk ? els.mainCjk : els.mainLatin;
+      const fallback = isCjk ? '"Noto Sans SC", sans-serif' : "Inter, sans-serif";
+      if (!("FontFace" in window)) {
+        button.title = "当前浏览器不支持网页字体上传。";
+        return;
+      }
+
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "载入中";
+      try {
+        const loadedFamilies = new Map();
+        const failed = [];
+        for (const file of fontFiles) {
+          const family = inferFontFamily(file.name);
+          const weight = inferFontWeight(file.name);
+          const style = inferFontStyle(file.name);
+          try {
+            const font = new FontFace(family, await file.arrayBuffer(), { weight, style, display: "swap" });
+            await font.load();
+            document.fonts.add(font);
+            if (!loadedFamilies.has(family)) loadedFamilies.set(family, []);
+            loadedFamilies.get(family).push({ weight, style });
+          } catch (error) {
+            failed.push(file.name);
+            console.warn("Font load failed:", file.name, error);
+          }
+        }
+        const loaded = Array.from(loadedFamilies.entries());
+        if (!loaded.length) throw new Error("No valid font files loaded.");
+        loaded.forEach(([family, faces], index) => {
+          const fontValue = `${quoteFontFamily(family)}, ${fallback}`;
+          const weightOptions = Array.from(new Set(faces.map((face) => face.weight)))
+            .sort((a, b) => Number(a) - Number(b))
+            .map((weight) => ({ value: weight, label: getWeightLabel(weight, target) }));
+          state.customFontWeights[target].set(fontValue, weightOptions);
+          if (index === loaded.length - 1) {
+            addFontOption(select, family, fontValue);
+            setWeightOptions(target, weightOptions);
+          } else {
+            appendFontOption(select, family, fontValue);
+          }
+        });
+        button.title = `已载入：${loaded.map(([family, faces]) => `${family}（${faces.length}）`).join(" / ")}${failed.length ? `；${failed.length} 个文件失败` : ""}`;
+      } catch (error) {
+        console.error(error);
+        button.title = "字体载入失败，请尝试 ttf、otf、woff 或 woff2 文件。";
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+        input.value = "";
+      }
+    }
+
+    function updateTypographyCalibration() {
+      setVar("--cjk-size-scale", "0.88em");
+      setVar("--cjk-baseline-shift", "-0.055em");
+    }
+
+    updateTypographyCalibration();
+
+    function normalizeHex(value, fallback = "#111111") {
+      const raw = String(value || "").trim();
+      if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+      if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toLowerCase()}`;
+      return fallback;
+    }
+
+    function updateColorMode(button, color) {
+      const light = isWhiteLike(color);
+      button.style.setProperty("--color-front", light ? "#ffffff" : "#050505");
+      button.style.setProperty("--color-back", light ? "#050505" : "#ffffff");
+      button.classList.toggle("is-light", light);
+      button.classList.toggle("is-dark", !light);
+    }
+
+    function isWhiteLike(color) {
+      return color.toLowerCase() === "#ffffff" || color.toLowerCase() === "#fffefa";
+    }
+
+    function updateRandomColorIcon(button, front, back) {
+      button.style.setProperty("--color-front", front);
+      button.style.setProperty("--color-back", back);
+    }
+
+    function bindColorControl({ colorId, hexId, modeId, randomId, cssName, lightRandom = false, onButtonUse = null }) {
+      const colorInput = els[colorId];
+      const hexInput = els[hexId];
+      const modeButton = els[modeId];
+      const randomButton = els[randomId];
+      const randomIconBack = randomColor({ light: lightRandom });
+      const randomIconFront = randomColor({ light: lightRandom });
+      let previousRandomColor = randomIconFront;
+      const apply = (value, { fromRandom = false, previousColor = previousRandomColor } = {}) => {
+        const next = normalizeHex(value, colorInput.defaultValue);
+        colorInput.value = next;
+        hexInput.value = next;
+        setVar(cssName, next);
+        updateColorMode(modeButton, next);
+        if (fromRandom) {
+          updateRandomColorIcon(randomButton, next, previousColor);
+          previousRandomColor = next;
+        }
+      };
+      colorInput.addEventListener("input", () => apply(colorInput.value));
+      hexInput.addEventListener("change", () => apply(hexInput.value));
+      modeButton.addEventListener("click", () => {
+        if (onButtonUse) onButtonUse();
+        apply(isWhiteLike(colorInput.value) ? "#000000" : "#ffffff");
+      });
+      randomButton.addEventListener("click", () => {
+        if (onButtonUse) onButtonUse();
+        apply(randomColor({ light: lightRandom }), { fromRandom: true, previousColor: previousRandomColor });
+      });
+      updateRandomColorIcon(randomButton, randomIconFront, randomIconBack);
+      apply(colorInput.value);
+    }
+
+    function setControlPanel(panel, toggle, open) {
+      panel.classList.toggle("is-open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+    }
+
+    function bindControlPanel(panelId, toggleId, { onOpen = null } = {}) {
+      const panel = els[panelId];
+      const toggle = els[toggleId];
+      if (!panel || !toggle) return;
+      toggle.addEventListener("click", () => {
+        const open = !panel.classList.contains("is-open");
+        if (open && onOpen) onOpen();
+        setControlPanel(panel, toggle, open);
+      });
+      setControlPanel(panel, toggle, false);
+    }
+
+    function bindStrokeControl() {
+      const apply = () => {
+        const width = Number(els.mainStrokeWidth.value) || 0;
+        els.mainStrokeWidthValue.value = els.mainStrokeWidth.value;
+        setVar("--main-latin-stroke", `${width}px`);
+        setVar("--main-cjk-stroke", `${width}px`);
+      };
+      els.mainStrokeWidth.addEventListener("input", apply);
+      els.mainStrokeWidthValue.addEventListener("change", () => {
+        els.mainStrokeWidth.value = Math.min(8, Math.max(0, Number(els.mainStrokeWidthValue.value) || 0));
+        apply();
+      });
+      apply();
+    }
+
+    function enableMainStroke() {
+      if ((Number(els.mainStrokeWidth.value) || 0) <= 0) {
+        els.mainStrokeWidth.value = "1";
+        els.mainStrokeWidthValue.value = "1";
+      }
+      setVar("--main-latin-stroke", `${Number(els.mainStrokeWidth.value) || 0}px`);
+      setVar("--main-cjk-stroke", `${Number(els.mainStrokeWidth.value) || 0}px`);
+    }
+
+    function randomColor({ light = false } = {}) {
+      const hue = Math.floor(Math.random() * 360);
+      const saturation = light ? 38 + Math.random() * 34 : 62 + Math.random() * 30;
+      const lightness = light ? 82 + Math.random() * 12 : 16 + Math.random() * 36;
+      return hslToHex(hue, saturation, lightness);
+    }
+
+    function hslToHex(h, s, l) {
+      s /= 100;
+      l /= 100;
+      const k = (n) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return `#${[f(0), f(8), f(4)].map((x) => Math.round(255 * x).toString(16).padStart(2, "0")).join("")}`;
+    }
+
+    function bindAlignment(groupName, cssName) {
+      const group = document.querySelector(`[data-align-group="${groupName}"]`);
+      group.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-align]");
+        if (!button) return;
+        group.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
+        setVar(cssName, button.dataset.align);
+      });
+    }
+
+    function bindExportScale() {
+      const group = document.querySelector("[data-export-scale-group]");
+      group.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-export-scale]");
+        if (!button) return;
+        state.exportScale = Number(button.dataset.exportScale) || 1;
+        group.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
+        updateExportSize();
+      });
+      updateExportSize();
+    }
+
+    function setUiTheme(theme) {
+      document.body.dataset.uiTheme = theme;
+      els.themeToggle.title = theme === "dark" ? "切换到亮色界面" : "切换到暗色界面";
+    }
+
+    function shouldAutoCollapseSidebar() {
+      return window.innerWidth <= 980 || (state.touchDevice && window.innerWidth <= 1180);
+    }
+
+    function applySidebarState() {
+      const narrow = shouldAutoCollapseSidebar();
+      if (!narrow && !state.sidebarUserCollapsed) state.sidebarOverlayOpen = false;
+      const collapsed = state.sidebarUserCollapsed || narrow;
+      const overlayOpen = collapsed && state.sidebarOverlayOpen;
+      els.app.classList.toggle("sidebar-collapsed", collapsed);
+      els.app.classList.toggle("sidebar-overlay-open", overlayOpen);
+      els.sidebarToggle.setAttribute("aria-expanded", String(!collapsed || overlayOpen));
+      els.sidebarToggle.setAttribute("aria-label", overlayOpen || !collapsed ? "折叠工具栏" : "打开工具栏");
+      els.sidebarFloatingToggle.setAttribute("aria-expanded", String(overlayOpen));
+      els.sidebarFloatingToggle.setAttribute("aria-label", overlayOpen ? "折叠工具栏" : "打开工具栏");
+      window.setTimeout(updateCanvasFit, 190);
+      updateCanvasFit();
+    }
+
+    function toggleSidebarFromPanel() {
+      if (els.app.classList.contains("sidebar-overlay-open")) {
+        state.sidebarOverlayOpen = false;
+      } else {
+        state.sidebarUserCollapsed = true;
+        state.sidebarOverlayOpen = false;
+      }
+      applySidebarState();
+    }
+
+    function releaseButtonFocus(event) {
+      event.currentTarget.blur();
+      window.getSelection?.().removeAllRanges();
+    }
+
+    function toggleSidebarFromFloat() {
+      if (shouldAutoCollapseSidebar()) {
+        state.sidebarOverlayOpen = true;
+      } else {
+        state.sidebarUserCollapsed = false;
+        state.sidebarOverlayOpen = false;
+      }
+      applySidebarState();
+    }
+
+    function getCanvasRatio() {
+      if (els.canvasRatio.value !== "custom") return Number(els.canvasRatio.value) || 1;
+      const width = Number(els.canvasWidthDock.value) || 760;
+      const height = Number(els.canvasHeightDock.value) || Math.round(width / 0.75);
+      return Math.max(0.2, Math.min(4, width / height));
+    }
+
+    function setCanvasExportWidth(value) {
+      const min = Number(els.canvasWidthDock.min);
+      const max = Number(els.canvasWidthDock.max);
+      const next = Math.round(Math.min(max, Math.max(min, Number(value) || min)));
+      els.canvasWidthDock.value = next;
+    }
+
+    function syncCanvasMetrics({ fromHeight = false } = {}) {
+      const ratio = getCanvasRatio();
+      if (fromHeight) {
+        setCanvasExportWidth((Number(els.canvasHeightDock.value) || 1013) * ratio);
+      }
+      const width = Number(els.canvasWidthDock.value) || 760;
+      if (document.activeElement !== els.canvasHeightDock || !fromHeight) {
+        els.canvasHeightDock.value = Math.round(width / ratio);
+      }
+      setVar("--poster-ratio", ratio);
+      els.poster.style.aspectRatio = String(ratio);
+      updateCanvasFit();
+      updateExportSize();
+    }
+
+    function updateCanvasFit() {
+      const stage = document.querySelector(".stage-wrap");
+      const stageRect = stage.getBoundingClientRect();
+      const { width, height } = getCanvasExportSize();
+      const availableWidth = Math.max(100, stageRect.width - 112);
+      const availableHeight = Math.max(100, stageRect.height - 168);
+      const fitScale = Math.min(availableWidth / width, availableHeight / height);
+      const previewScale = Math.max(0.1, Math.min(1, Number(els.canvasWidth.value) / 100 || 1));
+      const fitWidth = Math.max(40, width * fitScale * previewScale);
+      setVar("--canvas-fit-w", `${Math.round(fitWidth)}px`);
+      centerStageView();
+    }
+
+    function getCanvasExportSize() {
+      const width = Math.max(100, Math.round(Number(els.canvasWidthDock.value) || 760));
+      const height = Math.max(100, Math.round(Number(els.canvasHeightDock.value) || Math.round(width / getCanvasRatio())));
+      return { width, height };
+    }
+
+    function updateExportSize() {
+      if (!els.exportSize) return;
+      const { width, height } = getCanvasExportSize();
+      const scale = state.exportScale || 1;
+      els.exportSize.textContent = `输出：${width * scale} × ${height * scale} px`;
+    }
+
+    function centerStageView() {
+      const stage = document.querySelector(".stage-wrap");
+      requestAnimationFrame(() => {
+        const maxLeft = stage.scrollWidth - stage.clientWidth;
+        const maxTop = stage.scrollHeight - stage.clientHeight;
+        stage.scrollLeft = maxLeft > 0 ? maxLeft / 2 : 0;
+        stage.scrollTop = maxTop > 0 ? maxTop / 2 : 0;
+      });
+    }
+
+    function applyDefaults() {
+      els.mainText.value = defaults.mainText;
+      els.footerOne.value = defaults.footerOne;
+      els.footerTwo.value = defaults.footerTwo;
+      els.footerThree.value = defaults.footerThree;
+      state.footerVisible = true;
+      updateFooterVisibility();
+      renderMain();
+      renderFooter();
+    }
+
+    function updateFooterVisibility() {
+      els.poster.classList.toggle("footer-hidden", !state.footerVisible);
+      els.footerVisibilityToggle.classList.toggle("is-active", state.footerVisible);
+      els.footerVisibilityToggle.setAttribute("aria-pressed", String(state.footerVisible));
+      els.footerTextFields.hidden = !state.footerVisible;
+      els.secondaryTextControls.classList.toggle("is-disabled", !state.footerVisible);
+      els.secondaryTextControls.setAttribute("aria-disabled", String(!state.footerVisible));
+      [els.footerTextFields, els.secondaryTextControls].forEach((root) => {
+        root.querySelectorAll("input, select, textarea, button").forEach((control) => {
+          control.disabled = !state.footerVisible;
+        });
+      });
+      if (!state.footerVisible) {
+        els.secondaryTextControls.querySelectorAll("details").forEach((details) => {
+          details.open = false;
+        });
+        setControlPanel(els.secondaryColorPanel, els.secondaryColorToggle, false);
+      }
+    }
+
+    function resetDefaults() {
+      state.resetting = true;
+      document.querySelectorAll("input, select, textarea").forEach((control) => {
+        if (control.type === "file") return;
+        if (control.type === "checkbox") {
+          control.checked = control.defaultChecked;
+        } else if (control.tagName === "SELECT") {
+          const selected = Array.from(control.options).findIndex((option) => option.defaultSelected);
+          control.selectedIndex = selected >= 0 ? selected : 0;
+        } else {
+          control.value = control.defaultValue;
+        }
+        control.dispatchEvent(new Event("input"));
+        control.dispatchEvent(new Event("change"));
+      });
+      state.resetting = false;
+      state.randomLetter = false;
+      state.exportScale = 1;
+      state.footerVisible = true;
+      state.seed = Date.now();
+      setWeightOptions("latin", defaultWeightOptions.latin, "700");
+      setWeightOptions("cjk", defaultWeightOptions.cjk, "700");
+      els.randomLetters.textContent = "随机字母大小";
+      els.randomLetters.classList.remove("is-active");
+      els.mainStrokeWidth.value = els.mainStrokeWidth.defaultValue;
+      els.mainStrokeWidthValue.value = els.mainStrokeWidthValue.defaultValue;
+      els.mainStrokeColor.value = els.mainStrokeColor.defaultValue;
+      els.mainStrokeColorHex.value = els.mainStrokeColorHex.defaultValue;
+      setVar("--main-latin-stroke", "0px");
+      setVar("--main-cjk-stroke", "0px");
+      setVar("--main-stroke-color", els.mainStrokeColor.defaultValue);
+      setControlPanel(els.mainColorPanel, els.mainColorToggle, false);
+      setControlPanel(els.mainStrokePanel, els.mainStrokeToggle, false);
+      setControlPanel(els.secondaryColorPanel, els.secondaryColorToggle, false);
+      document.querySelectorAll("[data-export-scale]").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.exportScale === "1");
+      });
+      setUiTheme("dark");
+      applyDefaults();
+      syncCanvasMetrics();
+    }
+
+    bindRange("canvasWidth", "canvasWidthValue");
+    bindRange("mainSize", "mainSizeValue", "--main-size", (v) => `${v}px`);
+    bindRange("mainTracking", "mainTrackingValue", "--main-tracking", (v) => `${Number(v) / 100}em`);
+    bindRange("mainLeading", "mainLeadingValue", "--main-leading", (v) => `${Number(v) / 100}`);
+    bindRange("imageScale", "imageScaleValue", "--image-scale", (v) => `${Number(v) / 100}`);
+    bindRange("imageShift", "imageShiftValue", "--image-shift", (v) => `${Number(v) / 100}em`);
+    bindRange("secondarySize", "secondarySizeValue", "--secondary-size", (v) => `${v}px`);
+    bindRange("secondaryTracking", "secondaryTrackingValue", "--secondary-tracking", (v) => `${Number(v) / 100}em`);
+    bindRange("secondaryLeading", "secondaryLeadingValue", "--secondary-leading", (v) => `${Number(v) / 100}`);
+    bindRange("typewriterDuration", "typewriterDurationValue");
+
+    bindSelect("mainLatinWeight", "--main-latin-weight");
+    bindSelect("mainCjkWeight", "--main-cjk-weight");
+    bindSelect("mainLatin", "--main-latin");
+    bindSelect("mainCjk", "--main-cjk");
+    els.mainLatin.addEventListener("input", () => updateFontWeightOptions("latin"));
+    els.mainCjk.addEventListener("input", () => updateFontWeightOptions("cjk"));
+    els.mainLatin.addEventListener("change", () => updateFontWeightOptions("latin"));
+    els.mainCjk.addEventListener("change", () => updateFontWeightOptions("cjk"));
+    bindColorControl({ colorId: "posterBg", hexId: "posterBgHex", modeId: "posterBgMode", randomId: "randomPosterBg", cssName: "--poster-bg", lightRandom: true });
+    bindColorControl({ colorId: "mainColor", hexId: "mainColorHex", modeId: "mainColorMode", randomId: "randomMainColor", cssName: "--main-color" });
+    bindColorControl({ colorId: "mainStrokeColor", hexId: "mainStrokeColorHex", modeId: "mainStrokeColorMode", randomId: "randomMainStrokeColor", cssName: "--main-stroke-color", onButtonUse: enableMainStroke });
+    bindColorControl({ colorId: "secondaryColor", hexId: "secondaryColorHex", modeId: "secondaryColorMode", randomId: "randomSecondaryColor", cssName: "--secondary-color" });
+    bindStrokeControl();
+    bindControlPanel("mainColorPanel", "mainColorToggle");
+    bindControlPanel("mainStrokePanel", "mainStrokeToggle");
+    bindControlPanel("secondaryColorPanel", "secondaryColorToggle");
+    bindAlignment("main", "--main-align");
+    bindAlignment("secondary", "--secondary-align");
+    bindExportScale();
+
+    els.themeToggle.addEventListener("click", () => {
+      setUiTheme(document.body.dataset.uiTheme === "dark" ? "light" : "dark");
+    });
+    els.sidebarToggle.addEventListener("click", (event) => {
+      releaseButtonFocus(event);
+      toggleSidebarFromPanel();
+    });
+    els.sidebarFloatingToggle.addEventListener("click", (event) => {
+      releaseButtonFocus(event);
+      toggleSidebarFromFloat();
+    });
+    els.sidebarBackdrop.addEventListener("click", () => {
+      state.sidebarOverlayOpen = false;
+      applySidebarState();
+    });
+    els.resetDefaults.addEventListener("click", resetDefaults);
+    els.typeSettingsPanel.addEventListener("toggle", () => {
+      if (els.typeSettingsPanel.open) els.mainTypographyAdvanced.open = true;
+    });
+    els.customLatinFontButton.addEventListener("click", () => {
+      els.customLatinFontInput.click();
+    });
+    els.customCjkFontButton.addEventListener("click", () => {
+      els.customCjkFontInput.click();
+    });
+    els.customLatinFontInput.addEventListener("change", () => {
+      loadCustomFonts(Array.from(els.customLatinFontInput.files || []), "latin");
+    });
+    els.customCjkFontInput.addEventListener("change", () => {
+      loadCustomFonts(Array.from(els.customCjkFontInput.files || []), "cjk");
+    });
+    els.footerVisibilityToggle.addEventListener("click", () => {
+      state.footerVisible = !state.footerVisible;
+      updateFooterVisibility();
+    });
+    document.addEventListener("pointerdown", handleControlInteraction, true);
+    document.addEventListener("keydown", handleControlInteraction, true);
+    setUiTheme("dark");
+
+    els.canvasWidth.addEventListener("input", updateCanvasFit);
+    els.canvasWidthValue.addEventListener("change", updateCanvasFit);
+    els.canvasWidthDock.addEventListener("change", () => {
+      setCanvasExportWidth(els.canvasWidthDock.value);
+      syncCanvasMetrics();
+    });
+    els.canvasHeightDock.addEventListener("change", () => {
+      if (state.resetting) return;
+      els.canvasRatio.value = "custom";
+      syncCanvasMetrics({ fromHeight: true });
+    });
+    els.canvasRatio.addEventListener("input", () => syncCanvasMetrics());
+    els.canvasRatio.dispatchEvent(new Event("input"));
+    els.mainText.addEventListener("input", renderMain);
+    [els.footerOne, els.footerTwo, els.footerThree].forEach((textarea) => textarea.addEventListener("input", renderFooter));
+
+    window.addEventListener("resize", () => {
+      updateViewportMetrics();
+      applySidebarState();
+    });
+    window.visualViewport?.addEventListener("resize", () => {
+      updateViewportMetrics();
+      applySidebarState();
+    });
+
+    els.randomLetters.addEventListener("click", () => {
+      state.randomLetter = !state.randomLetter;
+      state.seed = Date.now();
+      els.randomLetters.textContent = state.randomLetter ? "重新随机字母" : "随机字母大小";
+      els.randomLetters.classList.toggle("is-active", state.randomLetter);
+      renderMain();
+    });
+
+    els.typewriterToggle.addEventListener("change", () => {
+      refreshTypewriter({ restart: els.typewriterToggle.checked });
+    });
+
+    els.typewriterDuration.addEventListener("input", () => {
+      refreshTypewriter({ restart: Boolean(els.typewriterToggle.checked) });
+    });
+
+    els.typewriterDurationValue.addEventListener("change", () => {
+      refreshTypewriter({ restart: Boolean(els.typewriterToggle.checked) });
+    });
+
+    els.randomRemoveBg.addEventListener("change", renderMain);
+
+    els.pickFolder.addEventListener("click", async () => {
+      if (!prefersFilePicker() && "showDirectoryPicker" in window) {
+        try {
+          const dir = await window.showDirectoryPicker();
+          const files = await collectDirectoryImages(dir);
+          await loadImages(files, dir.name);
+          return;
+        } catch (error) {
+          if (error.name === "AbortError") return;
+        }
+      }
+      els.folderInput.click();
+    });
+
+    els.folderInput.addEventListener("change", async () => {
+      const files = Array.from(els.folderInput.files || []);
+      const firstPath = files[0]?.webkitRelativePath?.split("/")[0] || (prefersFilePicker() ? "已选图片" : "已选文件夹");
+      await loadImages(files, firstPath);
+    });
+
+    els.shuffleImages.addEventListener("click", () => {
+      rebuildImageOrder();
+      renderMain();
+    });
+
+    async function loadImages(files, folderName) {
+      const token = state.loadToken + 1;
+      state.loadToken = token;
+      revokeImageUrls();
+      const imageFiles = files.filter((file) => /^image\//.test(file.type) || /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(file.name));
+      if (!imageFiles.length) {
+        els.folderStatus.textContent = "这个文件夹里没有识别到图片。";
+        renderMain();
+        return;
+      }
+
+      const neededCount = Math.min(imageFiles.length, Math.max(1, countImageMarkers(), 6));
+      const orderedFiles = shuffle(imageFiles);
+      const firstBatch = orderedFiles.slice(0, neededCount);
+      const remaining = orderedFiles.slice(neededCount);
+      els.folderStatus.textContent = `正在优先载入画面需要的 ${firstBatch.length} 张图片，共 ${imageFiles.length} 张。`;
+
+      const firstItems = (await Promise.all(firstBatch.map(loadImageFileItem))).filter(Boolean);
+      if (state.loadToken !== token) return;
+      state.imageItems = firstItems;
+      rebuildImageOrder();
+      renderMain();
+      updateFolderStatus(folderName, imageFiles.length, remaining.length);
+      if (remaining.length) loadRemainingImages(remaining, folderName, imageFiles.length, token);
+    }
+
+    function countImageMarkers() {
+      return (els.mainText.value.match(/\{\s*\}|｛\s*｝|\(\s*\)|（\s*）|【\s*】|\[\s*\]/g) || []).length;
+    }
+
+    async function loadImageFileItem(file) {
+      try {
+        const src = await fileToLayoutDataUrl(file);
+        const cutoutData = await makeCutoutCandidate(src).catch(() => null);
+        return {
+          name: file.name,
+          src,
+          cutout: cutoutData?.url || "",
+          clearSubject: Boolean(cutoutData?.clearSubject)
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+
+    async function loadRemainingImages(files, folderName, totalCount, token) {
+      const batchSize = 4;
+      for (let index = 0; index < files.length; index += batchSize) {
+        if (state.loadToken !== token) return;
+        const before = state.imageOrder.length;
+        const batch = files.slice(index, index + batchSize);
+        const items = (await Promise.all(batch.map(loadImageFileItem))).filter(Boolean);
+        if (state.loadToken !== token) return;
+        if (items.length) {
+          state.imageItems.push(...items);
+          state.imageOrder.push(...shuffle(items));
+          if (countImageMarkers() > before) renderMain();
+        }
+        updateFolderStatus(folderName, totalCount, files.length - index - batch.length);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      updateFolderStatus(folderName, totalCount, 0);
+    }
+
+    function updateFolderStatus(folderName, totalCount, remainingCount = 0) {
+      const loadedCount = state.imageItems.length;
+      const cutoutCount = state.imageItems.filter((item) => item.clearSubject).length;
+      const loadingText = remainingCount > 0 ? `，后台继续载入 ${remainingCount} 张` : "";
+      els.folderStatus.textContent = loadedCount
+        ? `已载入 ${folderName} 中的 ${loadedCount}/${totalCount} 张图片，${cutoutCount} 张适合随机去背景${loadingText}。`
+        : "正在读取图片，请稍候。";
+    }
+
+    function revokeImageUrls() {
+      state.imageItems = [];
+      state.imageOrder = [];
+    }
+
+    async function fileToLayoutDataUrl(file) {
+      const dataUrl = await fileToDataUrl(file);
+      if (/image\/svg\+xml|image\/gif/i.test(file.type)) return dataUrl;
+      try {
+        const img = await loadImage(dataUrl);
+        const maxSide = 1200;
+        const sourceMax = Math.max(img.naturalWidth, img.naturalHeight);
+        if (sourceMax <= maxSide) return dataUrl;
+        const scale = maxSide / sourceMax;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/png");
+      } catch (error) {
+        return dataUrl;
+      }
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function makeCutoutCandidate(src) {
+      const img = await loadImage(src);
+      const maxSide = 1400;
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const width = Math.max(1, Math.round(img.naturalWidth * scale));
+      const height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, width, height);
+      const image = ctx.getImageData(0, 0, width, height);
+      const data = image.data;
+      const bg = sampleBackground(data, width, height);
+      if (!bg.clearSubject) return null;
+      const threshold = bg.brightness > 220 ? 70 : 52;
+      for (let i = 0; i < data.length; i += 4) {
+        const distance = colorDistance(data[i], data[i + 1], data[i + 2], bg.r, bg.g, bg.b);
+        if (distance < threshold) {
+          data[i + 3] = 0;
+        } else if (distance < threshold + 28) {
+          data[i + 3] = Math.round(data[i + 3] * ((distance - threshold) / 28));
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+      return { url: canvas.toDataURL("image/png"), clearSubject: true };
+    }
+
+    function sampleBackground(data, width, height) {
+      const points = [];
+      const size = Math.max(5, Math.round(Math.min(width, height) * 0.05));
+      const zones = [
+        [0, 0],
+        [width - size, 0],
+        [0, height - size],
+        [width - size, height - size]
+      ];
+      zones.forEach(([x0, y0]) => {
+        for (let y = y0; y < y0 + size; y += 2) {
+          for (let x = x0; x < x0 + size; x += 2) {
+            const i = (y * width + x) * 4;
+            points.push([data[i], data[i + 1], data[i + 2]]);
+          }
+        }
+      });
+      const avg = points.reduce((acc, item) => [acc[0] + item[0], acc[1] + item[1], acc[2] + item[2]], [0, 0, 0]).map((v) => v / points.length);
+      const variance = points.reduce((acc, item) => acc + colorDistance(item[0], item[1], item[2], avg[0], avg[1], avg[2]), 0) / points.length;
+      const brightness = (avg[0] + avg[1] + avg[2]) / 3;
+      return {
+        r: avg[0],
+        g: avg[1],
+        b: avg[2],
+        brightness,
+        clearSubject: variance < 38 || brightness > 225
+      };
+    }
+
+    function colorDistance(r1, g1, b1, r2, g2, b2) {
+      return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    async function collectDirectoryImages(dirHandle) {
+      const files = [];
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === "file" && /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(entry.name)) {
+          files.push(await entry.getFile());
+        }
+        if (entry.kind === "directory") {
+          files.push(...await collectDirectoryImages(entry));
+        }
+      }
+      return files;
+    }
+
+    async function renderPosterCanvas() {
+      return await renderPosterCanvasManual();
+    }
+
+    async function renderStaticPosterCanvas() {
+      const shouldRestoreTypewriter = Boolean(els.typewriterToggle?.checked);
+      clearTypewriterTimer();
+      if (shouldRestoreTypewriter) {
+        if (!state.typewriterUnits.length) buildTypewriterUnits();
+        setTypewriterUnitReveal(state.typewriterUnits, state.typewriterUnits.length);
+      }
+      try {
+        await waitForLayoutFrame();
+        return await renderPosterCanvas();
+      } finally {
+        if (shouldRestoreTypewriter) {
+          els.typewriterToggle.checked = true;
+          completeTypewriter();
+        }
+      }
+    }
+
+    function waitForLayoutFrame() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+    }
+
+    async function renderPosterCanvasManual() {
+      await waitForPosterAssets();
+
+      const { width, height } = getCanvasExportSize();
+      const exportScale = state.exportScale || 1;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(width * exportScale);
+      canvas.height = Math.round(height * exportScale);
+      const ctx = canvas.getContext("2d");
+      ctx.scale(exportScale, exportScale);
+      const posterRect = els.poster.getBoundingClientRect();
+      const correction = width / Math.max(1, posterRect.width);
+      ctx.fillStyle = getComputedStyle(els.poster).backgroundColor;
+      ctx.fillRect(0, 0, width, height);
+      await drawPosterNode(ctx, els.poster, posterRect, correction);
+      drawSecondaryCopy(ctx, posterRect, correction);
+      return { canvas, width: canvas.width, height: canvas.height };
+    }
+
+    async function waitForPosterAssets() {
+      if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+      const images = Array.from(els.poster.querySelectorAll("img"));
+      await Promise.all(images.map((img) => {
+        if (img.complete) return img.decode ? img.decode().catch(() => {}) : true;
+        return new Promise((resolve) => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        });
+      }));
+    }
+
+    async function drawPosterNode(ctx, root, posterRect, correction) {
+      const nodes = collectDrawableNodes(root);
+      for (const node of nodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          drawTextNode(ctx, node, posterRect, correction);
+        } else if (node.classList?.contains("image-token")) {
+          await drawImageToken(ctx, node, posterRect, correction);
+        } else if (node.tagName === "IMG") {
+          await drawContainImage(ctx, node, posterRect, correction);
+        } else if (node.classList?.contains("empty-image")) {
+          drawEmptyImage(ctx, node, posterRect, correction);
+        }
+      }
+    }
+
+    function collectDrawableNodes(root) {
+      const nodes = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (node.parentElement?.closest(".secondary-copy")) return NodeFilter.FILTER_REJECT;
+            if (node.parentElement?.closest(".image-token")) return NodeFilter.FILTER_REJECT;
+            return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          }
+          if (node.closest?.(".secondary-copy")) return NodeFilter.FILTER_REJECT;
+          if (node.classList?.contains("image-token")) return NodeFilter.FILTER_ACCEPT;
+          if (node.closest?.(".image-token")) return NodeFilter.FILTER_REJECT;
+          if (node.tagName === "IMG" || node.classList?.contains("empty-image")) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        }
+      });
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      return nodes;
+    }
+
+    function drawTextNode(ctx, textNode, posterRect, correction) {
+      const parent = textNode.parentElement;
+      const style = getComputedStyle(parent);
+      const text = textNode.textContent || "";
+      if (!text) return;
+      const opacity = getEffectiveOpacity(parent);
+      if (opacity <= 0.01) return;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = style.color;
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const scaledFontSize = fontSize * correction;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${scaledFontSize}px ${style.fontFamily}`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      const strokeWidth = parseFloat(style.getPropertyValue("-webkit-text-stroke-width")) || 0;
+      const range = document.createRange();
+      splitTextNodeByDrawableRuns(text).forEach((segment) => {
+        const segmentText = text.slice(segment.start, segment.end);
+        if (!segmentText || /^\s+$/.test(segmentText)) return;
+        const rects = getRangeRects(range, textNode, segment.start, segment.end);
+        rects.forEach((rect) => {
+          if (!rect.width && !rect.height) return;
+          const x = (rect.left - posterRect.left) * correction;
+          const y = getCanvasTextBaseline(ctx, rect, posterRect, correction, scaledFontSize);
+          drawCanvasTextWithSpacing(ctx, segmentText, x, y, style, scaledFontSize, strokeWidth, correction);
+        });
+      });
+      range.detach();
+      ctx.restore();
+    }
+
+    function splitTextNodeByDrawableRuns(text) {
+      const runs = [];
+      const pattern = /\s+|[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[^\s]/gu;
+      let match;
+      while ((match = pattern.exec(text || ""))) {
+        const value = match[0];
+        runs.push({ start: match.index, end: match.index + value.length });
+      }
+      return runs;
+    }
+
+    function getRangeRects(range, node, start, end) {
+      range.setStart(node, start);
+      range.setEnd(node, end);
+      return Array.from(range.getClientRects()).filter((rect) => rect.width || rect.height);
+    }
+
+    function getCanvasTextBaseline(ctx, rect, posterRect, correction, fontSize) {
+      const metrics = ctx.measureText("Hgjpqy");
+      const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.22;
+      return (rect.bottom - posterRect.top) * correction - descent;
+    }
+
+    function drawCanvasTextWithSpacing(ctx, text, x, y, style, fontSize, strokeWidth, correction) {
+      const letterSpacing = (parseFloat(style.letterSpacing) || 0) * correction;
+      if (Math.abs(letterSpacing) < 0.001) {
+        if (strokeWidth > 0) {
+          ctx.lineWidth = strokeWidth * correction;
+          ctx.strokeStyle = style.webkitTextStrokeColor || style.color;
+          ctx.lineJoin = "round";
+          ctx.strokeText(text, x, y);
+        }
+        ctx.fillText(text, x, y);
+        return;
+      }
+      let cursor = x;
+      for (const char of text) {
+        if (char) {
+          if (strokeWidth > 0) {
+            ctx.lineWidth = strokeWidth * correction;
+            ctx.strokeStyle = style.webkitTextStrokeColor || style.color;
+            ctx.lineJoin = "round";
+            ctx.strokeText(char, cursor, y);
+          }
+          ctx.fillText(char, cursor, y);
+          cursor += ctx.measureText(char).width + letterSpacing;
+        }
+      }
+    }
+
+    function drawSecondaryCopy(ctx, posterRect, correction) {
+      const footer = document.querySelector(".secondary-copy");
+      if (!state.footerVisible || getComputedStyle(footer).display === "none") return;
+      const style = getComputedStyle(footer);
+      const columns = [
+        { node: els.footerOneOut, source: els.footerOne.value },
+        { node: els.footerTwoOut, source: els.footerTwo.value },
+        { node: els.footerThreeOut, source: els.footerThree.value }
+      ];
+      ctx.save();
+      ctx.fillStyle = style.color;
+      ctx.textBaseline = "alphabetic";
+      columns.forEach(({ node, source }) => {
+        const rect = node.getBoundingClientRect();
+        const nodeStyle = getComputedStyle(node);
+        const x = (rect.left - posterRect.left) * correction;
+        const y = (rect.top - posterRect.top) * correction;
+        const width = rect.width * correction;
+        drawSecondaryBlock(ctx, source, x, y, width, style, nodeStyle, correction);
+      });
+      ctx.restore();
+    }
+
+    function drawSecondaryBlock(ctx, text, x, y, width, style, nodeStyle, correction) {
+      const fontSize = (parseFloat(style.fontSize) || 12) * correction;
+      const lineHeight = fontSize * (parseFloat(style.lineHeight) / (parseFloat(style.fontSize) || 12) || 1.12);
+      const letterSpacing = (parseFloat(style.letterSpacing) || 0) * correction;
+      const align = nodeStyle.textAlign || style.textAlign || "left";
+      let cursorY = y + getCanvasBaseline(ctx, fontSize, style.fontWeight, style.fontFamily);
+      const paragraphs = String(text || "").split(/\n/);
+      paragraphs.forEach((paragraph, paragraphIndex) => {
+        const lines = wrapSecondaryLine(ctx, paragraph, width, fontSize, style, letterSpacing);
+        lines.forEach((line) => {
+          const lineWidth = measureRuns(ctx, line, fontSize, style, letterSpacing);
+          const offset = align === "center" ? (width - lineWidth) / 2 : align === "right" || nodeStyle.justifySelf === "end" ? width - lineWidth : 0;
+          drawRuns(ctx, line, x + Math.max(0, offset), cursorY, fontSize, style, letterSpacing);
+          cursorY += lineHeight;
+        });
+        if (paragraphIndex < paragraphs.length - 1) cursorY += lineHeight * 0.08;
+      });
+    }
+
+    function wrapSecondaryLine(ctx, text, maxWidth, fontSize, style, letterSpacing) {
+      const tokens = tokenizeCanvasText(text);
+      const lines = [];
+      let line = [];
+      tokens.forEach((token) => {
+        const trial = line.concat(token);
+        if (line.length && measureRuns(ctx, trial, fontSize, style, letterSpacing) > maxWidth) {
+          lines.push(trimCanvasTokens(line));
+          line = /^\s+$/.test(token.value) ? [] : [token];
+        } else {
+          line = trial;
+        }
+      });
+      if (line.length) lines.push(trimCanvasTokens(line));
+      return lines.filter((lineItems) => lineItems.length);
+    }
+
+    function tokenizeCanvasText(text) {
+      const tokens = [];
+      const pattern = /[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*|\s+|[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]|./gu;
+      let match;
+      while ((match = pattern.exec(text || ""))) {
+        const value = match[0];
+        if (/^[、，。；：！？,.!?;:%)]$/.test(value) && tokens.length && !/^\s+$/.test(tokens[tokens.length - 1].value)) {
+          tokens[tokens.length - 1].value += value;
+          continue;
+        }
+        tokens.push({ value, cjk: /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(value) });
+      }
+      return tokens;
+    }
+
+    function trimCanvasTokens(tokens) {
+      let start = 0;
+      let end = tokens.length;
+      while (start < end && /^\s+$/.test(tokens[start].value)) start += 1;
+      while (end > start && /^\s+$/.test(tokens[end - 1].value)) end -= 1;
+      return tokens.slice(start, end);
+    }
+
+    function measureRuns(ctx, tokens, fontSize, style, letterSpacing) {
+      return tokens.reduce((width, token, index) => {
+        setCanvasTextFont(ctx, token.cjk, fontSize, style);
+        return width + ctx.measureText(token.value).width + (index ? letterSpacing : 0);
+      }, 0);
+    }
+
+    function drawRuns(ctx, tokens, x, y, fontSize, style, letterSpacing) {
+      let cursorX = x;
+      tokens.forEach((token, index) => {
+        if (index) cursorX += letterSpacing;
+        setCanvasTextFont(ctx, token.cjk, fontSize, style);
+        ctx.fillText(token.value, cursorX, y);
+        cursorX += ctx.measureText(token.value).width;
+      });
+    }
+
+    function setCanvasTextFont(ctx, cjk, fontSize, style) {
+      const family = cjk
+        ? getComputedStyle(document.documentElement).getPropertyValue("--main-cjk").trim() || style.fontFamily
+        : style.fontFamily;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${family}`;
+    }
+
+    function getCanvasBaseline(ctx, fontSize, weight, family) {
+      ctx.font = `${weight} ${fontSize}px ${family}`;
+      const metrics = ctx.measureText("Hg");
+      const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fontSize * 0.75;
+      const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.2;
+      return (fontSize + ascent - descent) / 2;
+    }
+
+    async function drawImageToken(ctx, node, posterRect, correction) {
+      const opacity = getEffectiveOpacity(node);
+      if (opacity <= 0.01) return;
+      const tokenRect = node.getBoundingClientRect();
+      const lineStyle = getComputedStyle(node.parentElement || node);
+      const lineFontSize = (parseFloat(lineStyle.fontSize) || 16) * correction;
+      const baseline = getLineBaseline(ctx, tokenRect, posterRect, correction, lineFontSize, lineStyle);
+      for (const child of Array.from(node.children)) {
+        if (child.classList?.contains("paren")) {
+          drawElementText(ctx, child, posterRect, correction, opacity, baseline);
+        } else if (child.classList?.contains("empty-image")) {
+          drawEmptyImage(ctx, child, posterRect, correction);
+        } else if (child.classList?.contains("inline-image")) {
+          const img = child.querySelector("img");
+          if (img) await drawContainImage(ctx, img, posterRect, correction);
+        }
+      }
+    }
+
+    function getLineBaseline(ctx, rect, posterRect, correction, fontSize, style) {
+      ctx.save();
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      const baseline = getCanvasTextBaseline(ctx, rect, posterRect, correction, fontSize);
+      ctx.restore();
+      return baseline;
+    }
+
+    function drawElementText(ctx, node, posterRect, correction, parentOpacity = 1, forcedBaseline = null) {
+      const text = node.textContent || "";
+      if (!text) return;
+      const rect = node.getBoundingClientRect();
+      if (!rect.width && !rect.height) return;
+      const style = getComputedStyle(node);
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const scaledFontSize = fontSize * correction;
+      const opacity = parentOpacity * getOwnOpacity(node);
+      if (opacity <= 0.01) return;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = style.color;
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${scaledFontSize}px ${style.fontFamily}`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      const x = (rect.left - posterRect.left) * correction;
+      const y = Number.isFinite(forcedBaseline)
+        ? forcedBaseline
+        : getCanvasElementBaseline(ctx, rect, posterRect, correction, scaledFontSize);
+      drawCanvasTextWithSpacing(ctx, text, x, y, style, scaledFontSize, 0, correction);
+      ctx.restore();
+    }
+
+    function getCanvasElementBaseline(ctx, rect, posterRect, correction, fontSize) {
+      if (rect.height < 1) return (rect.bottom - posterRect.top) * correction;
+      return getCanvasTextBaseline(ctx, rect, posterRect, correction, fontSize);
+    }
+
+    function getOwnOpacity(node) {
+      const value = Number(getComputedStyle(node).opacity);
+      return Number.isFinite(value) ? value : 1;
+    }
+
+    async function drawContainImage(ctx, img, posterRect, correction) {
+      if (!img.complete) await new Promise((resolve) => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      });
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const opacity = getEffectiveOpacity(img);
+      if (opacity <= 0.01) return;
+      const rect = img.getBoundingClientRect();
+      const boxWidth = rect.width * correction;
+      const boxHeight = rect.height * correction;
+      const naturalRatio = (img.naturalWidth || rect.width) / (img.naturalHeight || rect.height);
+      const boxRatio = boxWidth / boxHeight;
+      let drawWidth = boxWidth;
+      let drawHeight = boxHeight;
+      if (naturalRatio > boxRatio) {
+        drawHeight = boxWidth / naturalRatio;
+      } else {
+        drawWidth = boxHeight * naturalRatio;
+      }
+      const x = (rect.left - posterRect.left) * correction + (boxWidth - drawWidth) / 2;
+      const y = (rect.top - posterRect.top) * correction + (boxHeight - drawHeight) / 2;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.drawImage(img, x, y, drawWidth, drawHeight);
+      ctx.restore();
+    }
+
+    function drawEmptyImage(ctx, node, posterRect, correction) {
+      const opacity = getEffectiveOpacity(node);
+      if (opacity <= 0.01) return;
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      const x = (rect.left - posterRect.left) * correction;
+      const y = (rect.top - posterRect.top) * correction;
+      const width = rect.width * correction;
+      const height = rect.height * correction;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.strokeStyle = style.borderTopColor;
+      ctx.lineWidth = parseFloat(style.borderTopWidth) || 2;
+      ctx.setLineDash([6, 5]);
+      ctx.strokeRect(x, y, width, height);
+      ctx.fillStyle = style.color;
+      const fontSize = (parseFloat(style.fontSize) || 12) * correction;
+      ctx.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(node.textContent.trim(), x + width / 2, y + height / 2);
+      ctx.restore();
+    }
+
+    function getEffectiveOpacity(node) {
+      let opacity = 1;
+      let current = node;
+      while (current && current !== els.poster.parentElement) {
+        if (current.nodeType === Node.ELEMENT_NODE) {
+          const value = Number(getComputedStyle(current).opacity);
+          if (Number.isFinite(value)) opacity *= value;
+        }
+        if (current === els.poster) break;
+        current = current.parentElement;
+      }
+      return opacity;
+    }
+
+    async function exportPosterPng() {
+      els.exportStatus.textContent = "正在生成 PNG。";
+      try {
+        const { canvas } = await renderStaticPosterCanvas();
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        if (!blob) throw new Error("empty canvas");
+        downloadBlob(blob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.png`);
+        els.exportStatus.textContent = "PNG 已生成。";
+      } catch (error) {
+        console.error(error);
+        els.exportStatus.textContent = `PNG 导出失败：${getErrorMessage(error)}`;
+      }
+    }
+
+    async function exportPosterPdf() {
+      els.exportStatus.textContent = "正在生成 PDF。";
+      try {
+        const rendered = await renderStaticPosterCanvas();
+        const jpegBlob = await new Promise((resolve) => rendered.canvas.toBlob(resolve, "image/jpeg", 0.96));
+        if (!jpegBlob) throw new Error("empty jpeg");
+        const pdfBlob = await makePdfFromJpeg(jpegBlob, rendered.canvas.width, rendered.canvas.height, rendered.width, rendered.height);
+        downloadBlob(pdfBlob, `图文自动排版工具-${new Date().toISOString().slice(0, 10)}.pdf`);
+        els.exportStatus.textContent = "PDF 已生成。";
+      } catch (error) {
+        console.error(error);
+        els.exportStatus.textContent = `PDF 导出失败：${getErrorMessage(error)}`;
+      }
+    }
+
+    async function exportPosterMp4() {
+      if (!HTMLCanvasElement.prototype.captureStream || !window.MediaRecorder) {
+        els.exportStatus.textContent = "视频导出失败：当前浏览器不支持画布录制。";
+        return;
+      }
+      const mimeType = getSupportedVideoMime();
+      if (!mimeType) {
+        els.exportStatus.textContent = "视频导出失败：当前浏览器没有可用的视频编码器。";
+        return;
+      }
+
+      const isMp4 = mimeType.includes("mp4");
+      const fps = 24;
+      const seconds = Math.max(0.5, Number(els.typewriterDuration?.value || 3));
+      const frameCount = Math.max(2, Math.ceil(seconds * fps));
+      const wasChecked = els.typewriterToggle.checked;
+      let stream;
+      const restoreTypewriterState = () => {
+        if (wasChecked) {
+          completeTypewriter();
+          els.typewriterToggle.checked = true;
+        } else {
+          els.typewriterToggle.checked = false;
+          disableTypewriter();
+        }
+      };
+
+      els.exportStatus.textContent = isMp4 ? "正在录制 MP4 动画。" : "当前浏览器不支持 MP4 编码，正在录制 WebM 动画。";
+      try {
+        clearTypewriterTimer();
+        cleanupTypewriterUnits();
+        els.typewriterToggle.checked = true;
+        const typewriterUnits = buildTypewriterUnits();
+        const unitCount = typewriterUnits.length;
+        setTypewriterUnitReveal(typewriterUnits, 0);
+
+        const firstFrame = await renderPosterCanvas();
+        const videoCanvas = document.createElement("canvas");
+        videoCanvas.width = firstFrame.canvas.width;
+        videoCanvas.height = firstFrame.canvas.height;
+        const videoCtx = videoCanvas.getContext("2d");
+        stream = videoCanvas.captureStream(fps);
+        const chunks = [];
+        const recorder = new MediaRecorder(stream, { mimeType });
+        const stopped = new Promise((resolve) => {
+          recorder.addEventListener("stop", resolve, { once: true });
+        });
+        recorder.addEventListener("dataavailable", (event) => {
+          if (event.data?.size) chunks.push(event.data);
+        });
+
+        recorder.start();
+        videoCtx.drawImage(firstFrame.canvas, 0, 0);
+        stream.getVideoTracks()[0]?.requestFrame?.();
+        for (let frame = 0; frame <= frameCount; frame += 1) {
+          const visibleCount = Math.ceil((frame / frameCount) * unitCount);
+          setTypewriterUnitReveal(typewriterUnits, visibleCount);
+          const rendered = await renderPosterCanvas();
+          videoCtx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+          videoCtx.drawImage(rendered.canvas, 0, 0);
+          stream.getVideoTracks()[0]?.requestFrame?.();
+          if (frame % Math.max(1, Math.round(fps / 3)) === 0) {
+            els.exportStatus.textContent = `${isMp4 ? "MP4" : "WebM"} 录制中：${Math.round((frame / frameCount) * 100)}%。`;
+          }
+          await wait(1000 / fps);
+        }
+
+        setTypewriterUnitReveal(typewriterUnits, unitCount);
+        const finalRendered = await renderPosterCanvas();
+        videoCtx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+        videoCtx.drawImage(finalRendered.canvas, 0, 0);
+        stream.getVideoTracks()[0]?.requestFrame?.();
+        await wait(180);
+        if (recorder.state === "recording" && recorder.requestData) recorder.requestData();
+        recorder.stop();
+        await stopped;
+        stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+        restoreTypewriterState();
+
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size < 1024) throw new Error("empty video");
+        const ext = isMp4 ? "mp4" : "webm";
+        downloadBlob(blob, `图文自动排版工具-打字机动画-${new Date().toISOString().slice(0, 10)}.${ext}`);
+        els.exportStatus.textContent = isMp4 ? "MP4 动画已生成。" : "浏览器不支持 MP4，本次已导出 WebM 动画。";
+      } catch (error) {
+        console.error(error);
+        els.exportStatus.textContent = `视频导出失败：${getErrorMessage(error)}`;
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+        restoreTypewriterState();
+      }
+    }
+
+    function getErrorMessage(error) {
+      const message = String(error?.message || error || "未知错误");
+      if (/tainted/i.test(message)) return "浏览器安全策略阻止画布导出，已切换到安全渲染路径后请重试。";
+      if (/empty video/i.test(message)) return "视频编码器没有生成有效数据，请换用最新版 Edge 或 Chrome。";
+      if (/not supported|not allowed|mime|codec/i.test(message)) return "当前浏览器不支持这个导出能力，请换用最新版 Chrome 或 Edge。";
+      return message.length > 64 ? `${message.slice(0, 64)}...` : message;
+    }
+
+    function getSupportedVideoMime() {
+      return [
+        "video/mp4;codecs=avc1.42E01E",
+        "video/mp4",
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm"
+      ].find((type) => MediaRecorder.isTypeSupported(type));
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      if (!("download" in HTMLAnchorElement.prototype)) {
+        window.open(url, "_blank", "noopener");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function makePdfFromJpeg(jpegBlob, imageWidth, imageHeight, pageWidth, pageHeight) {
+      const imageBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+      const chunks = [];
+      const offsets = [];
+      let size = 0;
+      const push = (part) => {
+        const bytes = typeof part === "string" ? asciiBytes(part) : part;
+        chunks.push(bytes);
+        size += bytes.length;
+      };
+      const obj = (body) => {
+        offsets.push(size);
+        push(`${offsets.length} 0 obj\n${body}\nendobj\n`);
+      };
+
+      push("%PDF-1.4\n%auto-layout\n");
+      obj("<< /Type /Catalog /Pages 2 0 R >>");
+      obj("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+      obj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+      offsets.push(size);
+      push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`);
+      push(imageBytes);
+      push("\nendstream\nendobj\n");
+      const content = `q\n${pageWidth.toFixed(2)} 0 0 ${pageHeight.toFixed(2)} 0 0 cm\n/Im0 Do\nQ\n`;
+      obj(`<< /Length ${content.length} >>\nstream\n${content}endstream`);
+
+      const xrefOffset = size;
+      push(`xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`);
+      offsets.forEach((offset) => push(`${String(offset).padStart(10, "0")} 00000 n \n`));
+      push(`trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+      return new Blob(chunks, { type: "application/pdf" });
+    }
+
+    function asciiBytes(text) {
+      const bytes = new Uint8Array(text.length);
+      for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i) & 255;
+      return bytes;
+    }
+
+    els.exportPngBottom.addEventListener("click", exportPosterPng);
+    els.printPdfBottom.addEventListener("click", exportPosterPdf);
+    els.exportMp4Bottom.addEventListener("click", exportPosterMp4);
+
+    function bindCanvasPan() {
+      const stage = document.querySelector(".stage-wrap");
+      let active = false;
+      let startX = 0;
+      let startY = 0;
+      let startLeft = 0;
+      let startTop = 0;
+      stage.addEventListener("mousedown", (event) => {
+        if (event.button !== 1) return;
+        event.preventDefault();
+        active = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        startLeft = stage.scrollLeft;
+        startTop = stage.scrollTop;
+        stage.classList.add("is-panning");
+      });
+      window.addEventListener("mousemove", (event) => {
+        if (!active) return;
+        stage.scrollLeft = startLeft - (event.clientX - startX);
+        stage.scrollTop = startTop - (event.clientY - startY);
+      });
+      window.addEventListener("mouseup", () => {
+        active = false;
+        stage.classList.remove("is-panning");
+      });
+      stage.addEventListener("auxclick", (event) => {
+        if (event.button === 1) event.preventDefault();
+      });
+    }
+
+    updateViewportMetrics();
+    applyDefaults();
+    applySidebarState();
+    bindCanvasPan();
+  </script>
+</body>
+</html>
