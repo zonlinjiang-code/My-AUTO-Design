@@ -87,7 +87,7 @@
       --main-color: #1ab79a;
       --secondary-color: #111111;
       --poster-pad: 3.8%;
-      --main-size: 30px;
+      --main-size: 20px;
       --main-latin-weight: 700;
       --main-cjk-weight: 700;
       --main-latin-stroke: 0px;
@@ -1629,8 +1629,8 @@
             <label>
               字号
               <div class="row">
-                <input id="mainSize" type="range" min="5" max="100" value="30">
-                <span class="unit-input"><input id="mainSizeValue" class="value" type="number" min="5" max="100" value="30" aria-label="正文字号数值"><span class="unit-label">px</span></span>
+                <input id="mainSize" type="range" min="5" max="100" value="20">
+                <span class="unit-input"><input id="mainSizeValue" class="value" type="number" min="5" max="100" value="20" aria-label="正文字号数值"><span class="unit-label">px</span></span>
               </div>
             </label>
             <label>
@@ -1912,7 +1912,7 @@
 
   <script>
     const defaults = {
-      mainText: "UTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images []/ choose a folder and let every text marker become an inline visual interruption () / typography, image scale, color, rhythm, and spacing can be adjusted while the composition keeps reflowing { } / English copy leads the reading path, with Chinese annotation following as a second voice () / 自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / the final canvas can be exported as PNG or PDF for poster tests, layout studies, and visual collections { } / 可以通过不同形式括号来嵌入图片{ }/()/Images can be embedded using different forms of brackets/ {}/[ ].",
+      mainText: "UTO IMAGE-TEXT LAYOUT TOOL { } / a live poster canvas for mixing type, icons, and found images []/ choose a folder and let every text marker become an inline visual interruption () / typography, image scale, color, rhythm, and spacing can be adjusted while the composition keeps reflowing { } /  自动图文排版工具用于生成海报、杂志式标题和图像夹注文本 { } / 你可以选择图片文件夹、随机替换图片、调整画布比例、字体粗细和导出文件 { } / the final canvas can be exported as PNG or PDF for poster tests, layout studies, and visual collections { } / 可以通过不同形式括号来嵌入图片{ }/()/Images can be embedded using different forms of brackets/ ",
       footerOne: "We look at all the different topics in the world from our perspective.\n从不同视角收集图像与文字。",
       footerTwo: "And we're collecting these themes and creating them in various new forms.\n让图文搭配生成新的版式。",
       footerThree: "/ Collected by Zonglin"
@@ -2253,6 +2253,12 @@
       output.addEventListener("change", updateFromOutput);
       output.addEventListener("keydown", (event) => {
         if (event.key === "Enter") output.blur();
+      });
+      input.addEventListener("dblclick", () => {
+        input.value = input.defaultValue;
+        output.value = output.defaultValue;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
       });
       update();
     }
