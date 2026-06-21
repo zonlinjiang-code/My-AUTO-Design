@@ -101,7 +101,7 @@
       --secondary-tracking: 0em;
       --secondary-leading: 1.12;
       --secondary-align: left;
-      --main-stroke-color: #ffffff;
+      --main-stroke-color: #000000;
       --image-scale: 1.18;
       --image-shift: -0.12em;
       --main-latin: Inter, sans-serif;
@@ -645,11 +645,41 @@
 
     .stroke-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 82px;
+      grid-template-columns: 74px minmax(0, 1fr) 70px;
       gap: 7px;
       align-items: center;
     }
 
+    .stroke-toggle {
+      min-height: 32px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      gap: 6px;
+    }
+
+    .stroke-toggle .footer-toggle-label,
+    .stroke-toggle .footer-toggle-state {
+      font-size: 10px;
+    }
+
+    .stroke-toggle .footer-toggle-state {
+      gap: 6px;
+    }
+
+    .stroke-toggle .footer-toggle-state::before {
+      width: 24px;
+      height: 14px;
+    }
+
+    .stroke-toggle .footer-toggle-state::after {
+      width: 10px;
+      height: 10px;
+      transform: translateX(10px);
+    }
+
+    .stroke-toggle:not(.is-active) .footer-toggle-state::after {
+      transform: translateX(0);
+    }
     .row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 82px;
@@ -734,7 +764,61 @@
     }
 
     .footer-toggle {
-      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 40px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      text-align: center;
+      position: relative;
+    }
+
+    .footer-toggle-label,
+    .footer-toggle-state {
+      pointer-events: none;
+    }
+
+    .footer-toggle-label {
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .footer-toggle-state {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: currentColor;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .footer-toggle-state::before {
+      content: "";
+      width: 28px;
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.18);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+    }
+
+    .footer-toggle-state::after {
+      content: "";
+      position: absolute;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: currentColor;
+      transform: translateX(12px);
+      transition: transform 0.16s ease;
+    }
+
+    .footer-toggle:not(.is-active) .footer-toggle-state::after {
+      transform: translateX(0);
     }
 
     .footer-text-fields {
@@ -1535,14 +1619,14 @@
 </head>
 <body data-ui-theme="dark">
   <main class="app" id="app">
-    <button id="sidebarFloatingToggle" class="toolbar-toggle toolbar-float-toggle" type="button" aria-label="打开工具栏" aria-expanded="false"></button>
+    <button id="sidebarFloatingToggle" class="toolbar-toggle toolbar-float-toggle" type="button" aria-label="打开工具栏" aria-expanded="false" title="打开工具栏"></button>
     <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
     <aside class="sidebar" aria-label="排版控制">
       <div class="app-header">
         <div class="app-title">Auto Zonglin</div>
         <div class="header-actions">
-          <button id="resetDefaults" class="reset-button" type="button">Reset</button>
-          <button id="sidebarToggle" class="toolbar-toggle" type="button" aria-label="折叠工具栏" aria-expanded="true"></button>
+          <button id="resetDefaults" class="reset-button" type="button" title="恢复默认示例">Reset</button>
+          <button id="sidebarToggle" class="toolbar-toggle" type="button" aria-label="折叠工具栏" aria-expanded="true" title="折叠工具栏"></button>
         </div>
       </div>
 
@@ -1592,8 +1676,8 @@
           </label>
         </div>
         <div class="control-grid">
-          <button id="customLatinFontButton" class="secondary font-upload-button" type="button">上传英文字体</button>
-          <button id="customCjkFontButton" class="secondary font-upload-button" type="button">上传中文字体</button>
+          <button id="customLatinFontButton" class="secondary font-upload-button" type="button" title="上传英文字体文件">上传英文字体</button>
+          <button id="customCjkFontButton" class="secondary font-upload-button" type="button" title="上传中文字体文件">上传中文字体</button>
         </div>
         <input id="customLatinFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple hidden>
         <input id="customCjkFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple hidden>
@@ -1653,50 +1737,53 @@
           <label>
             对齐方式
             <div class="segmented" data-align-group="main">
-              <button type="button" data-align="left" class="is-active" aria-label="左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
-              <button type="button" data-align="center" aria-label="居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
-              <button type="button" data-align="right" aria-label="右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
-              <button type="button" data-align="justify" aria-label="两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="left" class="is-active" aria-label="左对齐" title="左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="center" aria-label="居中对齐" title="居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="right" aria-label="右对齐" title="右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+              <button type="button" data-align="justify" aria-label="两端对齐" title="两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
             </div>
           </label>
           <div class="random-letter-tool">
             随机字母
-            <button id="randomLetters" class="secondary" type="button">随机字母大小</button>
+            <button id="randomLetters" class="secondary" type="button" title="随机调整英文字符大小">随机字母大小</button>
           </div>
         </div>
         <div class="color-field" id="mainColorPanel">
-          <button class="control-toggle" id="mainColorToggle" type="button" aria-expanded="false" aria-controls="mainColorOptions">
+          <button class="control-toggle" id="mainColorToggle" type="button" aria-expanded="false" aria-controls="mainColorOptions" title="展开文字颜色设置">
             <span class="control-icon color-icon" aria-hidden="true"></span>
             <span>文字颜色</span>
           </button>
           <div class="control-panel" id="mainColorOptions">
           <div class="color-control">
-            <button id="mainColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <button id="mainColorMode" class="color-mode is-dark secondary" type="button" title="切换文字颜色为黑色或白色"><span>黑/白</span></button>
             <div class="color-value">
               <input id="mainColor" type="color" value="#1ab79a">
               <input id="mainColorHex" class="color-hex" type="text" value="#1ab79a" aria-label="文字颜色色号" spellcheck="false">
             </div>
-            <button id="randomMainColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+            <button id="randomMainColor" class="color-random is-front secondary" type="button" title="随机文字颜色"><span>随机</span></button>
           </div>
           </div>
         </div>
         <div class="stroke-field" id="mainStrokePanel">
-          <button class="control-toggle" id="mainStrokeToggle" type="button" aria-expanded="false" aria-controls="mainStrokeOptions">
+          <button class="control-toggle" id="mainStrokeToggle" type="button" aria-expanded="false" aria-controls="mainStrokeOptions" title="展开文字描边设置">
             <span class="control-icon stroke-icon" aria-hidden="true"></span>
             <span>文字描边</span>
           </button>
           <div class="control-panel" id="mainStrokeOptions">
           <div class="color-control">
-            <button id="mainStrokeColorMode" class="color-mode is-light secondary" type="button"><span>黑/白</span></button>
+            <button id="mainStrokeColorMode" class="color-mode is-light secondary" type="button" title="切换描边颜色为黑色或白色"><span>黑/白</span></button>
             <div class="color-value">
-              <input id="mainStrokeColor" type="color" value="#ffffff">
-              <input id="mainStrokeColorHex" class="color-hex" type="text" value="#ffffff" aria-label="描边颜色色号" spellcheck="false">
+              <input id="mainStrokeColor" type="color" value="#000000">
+              <input id="mainStrokeColorHex" class="color-hex" type="text" value="#000000" aria-label="描边颜色色号" spellcheck="false">
             </div>
-            <button id="randomMainStrokeColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+            <button id="randomMainStrokeColor" class="color-random is-front secondary" type="button" title="随机描边颜色"><span>随机</span></button>
           </div>
           <div class="stroke-row">
-            <input id="mainStrokeWidth" type="range" min="0" max="8" step="0.5" value="0">
-            <span class="unit-input"><input id="mainStrokeWidthValue" class="value" type="number" min="0" max="8" step="0.5" value="0" aria-label="描边宽度"><span class="unit-label">px</span></span>
+            <button id="mainStrokeVisibilityToggle" class="secondary footer-toggle stroke-toggle" type="button" aria-pressed="false" aria-label="文字描边显示开关" title="显示或隐藏文字描边">
+              <span id="mainStrokeVisibilityState" class="footer-toggle-state">隐藏</span>
+            </button>
+            <input id="mainStrokeWidth" type="range" min="0" max="10" step="0.5" value="0">
+            <span class="unit-input"><input id="mainStrokeWidthValue" class="value" type="number" min="0" max="15" step="0.5" value="0" aria-label="描边宽度"><span class="unit-label">px</span></span>
           </div>
           </div>
         </div>
@@ -1708,7 +1795,6 @@
         <details class="section-panel">
           <summary class="section-title"><span class="section-icon">T</span><span class="section-name">Text 副文本</span></summary>
           <div class="section-body">
-        <button id="footerVisibilityToggle" class="secondary footer-toggle" type="button" aria-pressed="false" aria-controls="footerTextFields">底部文字</button>
         <div id="footerTextFields" class="footer-text-fields" hidden>
             <label>
               左侧长栏
@@ -1723,6 +1809,10 @@
               <textarea id="footerThree" spellcheck="false"></textarea>
             </label>
         </div>
+        <button id="footerVisibilityToggle" class="secondary footer-toggle" type="button" aria-pressed="false" aria-controls="footerTextFields secondaryTextControls" title="显示或隐藏底部文字">
+          <span class="footer-toggle-label">底部文字</span>
+          <span id="footerVisibilityState" class="footer-toggle-state">显示</span>
+        </button>
         <div id="secondaryTextControls" class="footer-settings" aria-disabled="true">
         <details class="advanced">
           <summary>字号 / 字间距 / 行间距</summary>
@@ -1751,28 +1841,28 @@
           </div>
         </details>
         <div class="color-field" id="secondaryColorPanel">
-          <button class="control-toggle" id="secondaryColorToggle" type="button" aria-expanded="false" aria-controls="secondaryColorOptions">
+          <button class="control-toggle" id="secondaryColorToggle" type="button" aria-expanded="false" aria-controls="secondaryColorOptions" title="展开底部文字颜色设置">
             <span class="control-icon color-icon" aria-hidden="true"></span>
             <span>文字颜色</span>
           </button>
           <div class="control-panel" id="secondaryColorOptions">
           <div class="color-control">
-            <button id="secondaryColorMode" class="color-mode is-dark secondary" type="button"><span>黑/白</span></button>
+            <button id="secondaryColorMode" class="color-mode is-dark secondary" type="button" title="切换底部文字颜色为黑色或白色"><span>黑/白</span></button>
             <div class="color-value">
               <input id="secondaryColor" type="color" value="#111111">
               <input id="secondaryColorHex" class="color-hex" type="text" value="#111111" aria-label="底部文字颜色色号" spellcheck="false">
             </div>
-            <button id="randomSecondaryColor" class="color-random is-front secondary" type="button"><span>随机</span></button>
+            <button id="randomSecondaryColor" class="color-random is-front secondary" type="button" title="随机底部文字颜色"><span>随机</span></button>
           </div>
           </div>
         </div>
         <label>
           对齐方式
           <div class="segmented" data-align-group="secondary">
-            <button type="button" data-align="left" class="is-active" aria-label="底部左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
-            <button type="button" data-align="center" aria-label="底部居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
-            <button type="button" data-align="right" aria-label="底部右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
-            <button type="button" data-align="justify" aria-label="底部两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="left" class="is-active" aria-label="底部左对齐" title="底部左对齐"><span class="align-icon align-left"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="center" aria-label="底部居中对齐" title="底部居中对齐"><span class="align-icon align-center"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="right" aria-label="底部右对齐" title="底部右对齐"><span class="align-icon align-right"><span></span><span></span><span></span></span></button>
+            <button type="button" data-align="justify" aria-label="底部两端对齐" title="底部两端对齐"><span class="align-icon align-justify"><span></span><span></span><span></span></span></button>
           </div>
         </label>
         </div>
@@ -1785,8 +1875,8 @@
           <summary class="section-title"><span class="section-icon">I</span><span class="section-name">Image 图片</span></summary>
           <div class="section-body">
             <div class="control-grid">
-              <button id="pickFolder" type="button">选择文件夹</button>
-              <button id="shuffleImages" class="secondary" type="button">随机图片</button>
+              <button id="pickFolder" type="button" title="选择图片文件夹">选择文件夹</button>
+              <button id="shuffleImages" class="secondary" type="button" title="随机替换图片">随机图片</button>
             </div>
             <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple hidden>
             <p id="folderStatus" class="hint">尚未选择图片文件夹。文字里的空花括号会先显示为占位框。</p>
@@ -1818,12 +1908,12 @@
             <div class="color-field">
               背景色
               <div class="color-control">
-                <button id="posterBgMode" class="color-mode is-light secondary" type="button"><span>黑/白</span></button>
+                <button id="posterBgMode" class="color-mode is-light secondary" type="button" title="切换背景颜色为黑色或白色"><span>黑/白</span></button>
                 <div class="color-value">
                   <input id="posterBg" type="color" value="#fffefa">
                   <input id="posterBgHex" class="color-hex" type="text" value="#fffefa" aria-label="背景色色号" spellcheck="false">
                 </div>
-                <button id="randomPosterBg" class="color-random is-front secondary" type="button"><span>随机</span></button>
+                <button id="randomPosterBg" class="color-random is-front secondary" type="button" title="随机背景颜色"><span>随机</span></button>
               </div>
             </div>
           </div>
@@ -1856,17 +1946,17 @@
         <div class="export-scale-control">
           SCALE
           <div class="export-scale-options" data-export-scale-group>
-            <button type="button" class="is-active" data-export-scale="1">1x</button>
-            <button type="button" data-export-scale="2">2x</button>
-            <button type="button" data-export-scale="3">3x</button>
+            <button type="button" class="is-active" data-export-scale="1" title="按当前画布尺寸导出">1x</button>
+            <button type="button" data-export-scale="2" title="按 2 倍画布尺寸导出">2x</button>
+            <button type="button" data-export-scale="3" title="按 3 倍画布尺寸导出">3x</button>
           </div>
         </div>
         <p id="exportSize" class="hint">输出：760 × 1013 px</p>
         <p id="exportStatus" class="hint">导出会按照下方 W/H 的真实画板尺寸生成文件。</p>
         <div class="export-actions">
-          <button id="exportPngBottom" type="button">导出 PNG</button>
-          <button id="printPdfBottom" class="secondary" type="button">导出 PDF</button>
-          <button id="exportMp4Bottom" class="secondary" type="button">导出 MP4</button>
+          <button id="exportPngBottom" type="button" title="导出 PNG 图片">导出 PNG</button>
+          <button id="printPdfBottom" class="secondary" type="button" title="导出 PDF 文件">导出 PDF</button>
+          <button id="exportMp4Bottom" class="secondary" type="button" title="录制并导出 MP4 动画">导出 MP4</button>
         </div>
           </div>
         </details>
@@ -1905,7 +1995,7 @@
             <option value="0.7070707">A4</option>
           </select>
         </div>
-        <button id="themeToggle" class="theme-icon-button secondary" type="button" aria-label="切换亮暗界面"></button>
+        <button id="themeToggle" class="theme-icon-button secondary" type="button" aria-label="切换亮暗界面" title="切换亮暗界面"></button>
       </div>
     </section>
   </main>
@@ -2531,30 +2621,46 @@
       setControlPanel(panel, toggle, false);
     }
 
+    function setMainStrokeSwitch(enabled) {
+      els.mainStrokeVisibilityToggle.classList.toggle("is-active", enabled);
+      els.mainStrokeVisibilityToggle.setAttribute("aria-pressed", String(enabled));
+      els.mainStrokeVisibilityToggle.title = enabled ? "点击隐藏文字描边" : "点击显示文字描边";
+      els.mainStrokeVisibilityState.textContent = enabled ? "显示" : "隐藏";
+    }
+
+    function formatStrokeWidth(width) {
+      return Number.isInteger(width) ? String(width) : String(Number(width.toFixed(2)));
+    }
+
+    function applyMainStrokeWidth(width = Number(els.mainStrokeWidthValue.value) || 0) {
+      const rangeMax = Number(els.mainStrokeWidth.max) || 10;
+      const inputMax = Number(els.mainStrokeWidthValue.max) || 15;
+      const nextWidth = Math.min(inputMax, Math.max(0, Number(width) || 0));
+      const displayWidth = formatStrokeWidth(nextWidth);
+      els.mainStrokeWidth.value = String(Math.min(rangeMax, nextWidth));
+      els.mainStrokeWidthValue.value = displayWidth;
+      setVar("--main-latin-stroke", `${displayWidth}px`);
+      setVar("--main-cjk-stroke", `${displayWidth}px`);
+      setMainStrokeSwitch(nextWidth > 0);
+    }
+
+    function setMainStrokeEnabled(enabled) {
+      const currentWidth = Number(els.mainStrokeWidthValue.value) || Number(els.mainStrokeWidth.value) || 0;
+      applyMainStrokeWidth(enabled ? (currentWidth > 0 ? currentWidth : 1) : 0);
+    }
+
     function bindStrokeControl() {
-      const apply = () => {
-        const width = Number(els.mainStrokeWidth.value) || 0;
-        els.mainStrokeWidthValue.value = els.mainStrokeWidth.value;
-        setVar("--main-latin-stroke", `${width}px`);
-        setVar("--main-cjk-stroke", `${width}px`);
-      };
-      els.mainStrokeWidth.addEventListener("input", apply);
-      els.mainStrokeWidthValue.addEventListener("change", () => {
-        els.mainStrokeWidth.value = Math.min(8, Math.max(0, Number(els.mainStrokeWidthValue.value) || 0));
-        apply();
+      els.mainStrokeWidth.addEventListener("input", () => applyMainStrokeWidth(Number(els.mainStrokeWidth.value) || 0));
+      els.mainStrokeWidthValue.addEventListener("change", () => applyMainStrokeWidth(Number(els.mainStrokeWidthValue.value) || 0));
+      els.mainStrokeVisibilityToggle.addEventListener("click", () => {
+        setMainStrokeEnabled((Number(els.mainStrokeWidthValue.value) || 0) <= 0);
       });
-      apply();
+      applyMainStrokeWidth();
     }
 
     function enableMainStroke() {
-      if ((Number(els.mainStrokeWidth.value) || 0) <= 0) {
-        els.mainStrokeWidth.value = "1";
-        els.mainStrokeWidthValue.value = "1";
-      }
-      setVar("--main-latin-stroke", `${Number(els.mainStrokeWidth.value) || 0}px`);
-      setVar("--main-cjk-stroke", `${Number(els.mainStrokeWidth.value) || 0}px`);
+      setMainStrokeEnabled(true);
     }
-
     function randomColor({ light = false } = {}) {
       const hue = Math.floor(Math.random() * 360);
       const saturation = light ? 38 + Math.random() * 34 : 62 + Math.random() * 30;
@@ -2722,6 +2828,8 @@
       els.poster.classList.toggle("footer-hidden", !state.footerVisible);
       els.footerVisibilityToggle.classList.toggle("is-active", state.footerVisible);
       els.footerVisibilityToggle.setAttribute("aria-pressed", String(state.footerVisible));
+      els.footerVisibilityToggle.title = state.footerVisible ? "点击隐藏底部文字" : "点击显示底部文字";
+      els.footerVisibilityState.textContent = state.footerVisible ? "显示" : "隐藏";
       els.footerTextFields.hidden = !state.footerVisible;
       els.secondaryTextControls.classList.toggle("is-disabled", !state.footerVisible);
       els.secondaryTextControls.setAttribute("aria-disabled", String(!state.footerVisible));
@@ -2764,6 +2872,7 @@
       els.randomLetters.classList.remove("is-active");
       els.mainStrokeWidth.value = els.mainStrokeWidth.defaultValue;
       els.mainStrokeWidthValue.value = els.mainStrokeWidthValue.defaultValue;
+      setMainStrokeSwitch(false);
       els.mainStrokeColor.value = els.mainStrokeColor.defaultValue;
       els.mainStrokeColorHex.value = els.mainStrokeColorHex.defaultValue;
       setVar("--main-latin-stroke", "0px");
@@ -2805,7 +2914,7 @@
     bindColorControl({ colorId: "secondaryColor", hexId: "secondaryColorHex", modeId: "secondaryColorMode", randomId: "randomSecondaryColor", cssName: "--secondary-color" });
     bindStrokeControl();
     bindControlPanel("mainColorPanel", "mainColorToggle");
-    bindControlPanel("mainStrokePanel", "mainStrokeToggle");
+    bindControlPanel("mainStrokePanel", "mainStrokeToggle", { onOpen: enableMainStroke });
     bindControlPanel("secondaryColorPanel", "secondaryColorToggle");
     bindAlignment("main", "--main-align");
     bindAlignment("secondary", "--secondary-align");
